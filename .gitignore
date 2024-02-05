@@ -1,3 +1,9 @@
 .DS_Store
 */.DS_Store
+
+# docker
+push-docker-container.sh
+
+# folder
 bin/
+output/

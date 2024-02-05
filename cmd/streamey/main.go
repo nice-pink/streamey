@@ -31,6 +31,7 @@ func main() {
 	outputFilepath := flag.String("outputFilepath", "", "[Optional] Output file path, if data should be dumped to file.")
 	reconnect := flag.Bool("reconnect", false, "[Optional] Reconnect on any interruption.")
 	minioConfig := flag.String("minioConfig", "", "[Optional] Json config file for minio. Use minio if defined.")
+	minioCleanUpAfterSec := flag.Int64("minioCleanUpAfterSec", 0, "[Optional] Cleanup minio bucket after seconds.")
 	flag.Parse()
 
 	// read stream
@@ -41,7 +42,7 @@ func main() {
 	if *minioConfig != "" {
 		goRoutineCounter++
 
-		go ManageMinio(*minioConfig, delay, *outputFilepath, *reconnect)
+		go ManageMinio(*minioConfig, delay, *outputFilepath, *minioCleanUpAfterSec, *reconnect)
 	}
 
 	// wait for go routines to be done
@@ -58,7 +59,7 @@ func ReadStream(url string, maxBytes int64, outputFilepath string, reconnect boo
 
 // minio
 
-func ManageMinio(configFile string, delay int64, localFolder string, loop bool) {
+func ManageMinio(configFile string, delay int64, localFolder string, minioCleanUpAfterSec int64, loop bool) {
 	// read config
 	data, err := os.ReadFile(configFile)
 	if err != nil {
@@ -86,8 +87,8 @@ func ManageMinio(configFile string, delay int64, localFolder string, loop bool) 
 		PushFiles(m, localFolder)
 
 		// delete
-		day := int64(3600 * 24)
-		m.DeleteFiles(bucket, minioFolder, 2*day)
+		//day := int64(3600 * 24)
+		m.DeleteFiles(bucket, minioFolder, minioCleanUpAfterSec)
 
 		if !loop {
 			break

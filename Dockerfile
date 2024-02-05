@@ -16,8 +16,8 @@ RUN go mod download
 # copy module code
 COPY . .
 
-# RUN CGO_ENABLED=0 GOOS=linux go build -o /repo
-RUN go build .
+# build all
+RUN ./build_all
 
 FROM cgr.dev/chainguard/git:latest-root-dev AS runner
 
@@ -31,5 +31,6 @@ LABEL org.opencontainers.image.source="https://github.com/nice-pink/streamey/blo
 WORKDIR /app
 
 # copy executable
-COPY --from=builder /app/streamey /app/streamey
-ENTRYPOINT [ "/app/streamey" ]
+COPY --from=builder /app/bin/streamey /app/streamey
+COPY --from=builder /app/bin/cleaney /app/cleaney
+# ENTRYPOINT [ "/app/streamey" ]

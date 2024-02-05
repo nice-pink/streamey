@@ -8,3 +8,7 @@ github.com/nice-pink/goutil v0.0.20 h1:jY5/OFuCXtsWmZdP1IuqsDl2iimKZXL8KTHmgupwG
 github.com/nice-pink/goutil v0.0.20/go.mod h1:Q1MmrAIuePSpgepKVLGVsyzeDHoTfaWbY44eZBdaB4w=
 github.com/nice-pink/goutil v0.0.21 h1:08+xaILY4o4GRuXR7wBgNC/FWa5Gq+moI2VcJDCZK7Q=
 github.com/nice-pink/goutil v0.0.21/go.mod h1:Q1MmrAIuePSpgepKVLGVsyzeDHoTfaWbY44eZBdaB4w=
+github.com/nice-pink/goutil v0.0.22 h1:nlJMwcvd7o3auA+fh94SX4a+24sanxHf25pkewA3Cho=
+github.com/nice-pink/goutil v0.0.22/go.mod h1:Q1MmrAIuePSpgepKVLGVsyzeDHoTfaWbY44eZBdaB4w=
+github.com/nice-pink/goutil v0.0.23 h1:gt0MfLjgqwx5S+Tn8+RZFkGODik6o60RUmhJMAvw8gs=
+github.com/nice-pink/goutil v0.0.23/go.mod h1:Q1MmrAIuePSpgepKVLGVsyzeDHoTfaWbY44eZBdaB4w=

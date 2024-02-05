@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# build streamey
+cd cmd/streamey
+go build -o ../../bin
+cd ../..
+
+# build cleaney
+cd cmd/cleaney
+go build -o ../../bin
+cd ../..

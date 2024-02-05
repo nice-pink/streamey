@@ -26,14 +26,14 @@ func main() {
 	log.Time()
 
 	url := flag.String("url", "", "Stream url")
-	maxBytes := flag.Int("maxBytes", -1, "Max bytes to read from url.")
+	maxBytes := flag.Int64("maxBytes", -1, "Max bytes to read from url.")
 	outputFilepath := flag.String("outputFilepath", "", "Output file path, if data should be dumped to file.")
 	reconnect := flag.Bool("reconnect", false, "Reconnect on any interruption.")
 	flag.Parse()
 
 	config := network.DefaultRequestConfig()
 	//config.MaxBytes = 144000000
-	config.MaxBytes = int64(*maxBytes)
+	config.MaxBytes = *maxBytes
 
 	// early exit
 	if *url == "" {

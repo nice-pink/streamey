@@ -3,6 +3,7 @@
 
 # docker
 push-docker-container.sh
+.env
 
 # folder
 bin/

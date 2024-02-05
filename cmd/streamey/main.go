@@ -1,72 +1,105 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"os"
-	"strconv"
+	"sync"
 	"time"
 
+	"github.com/nice-pink/goutil/pkg/filesystem"
 	"github.com/nice-pink/goutil/pkg/log"
-	"github.com/nice-pink/goutil/pkg/network"
+	"github.com/nice-pink/streamey/pkg/miniomanager"
+	"github.com/nice-pink/streamey/pkg/streamey"
 )
 
-func getFilePath(baseFilePath string, iteration int, addTimestamp bool) string {
-	if baseFilePath == "" {
-		return ""
-	}
-	if addTimestamp {
-		now := time.Now()
-		baseFilePath += "_" + strconv.FormatInt(now.Unix(), 10)
-	}
-	return baseFilePath + "_" + strconv.Itoa(iteration)
-}
+var wg sync.WaitGroup
+
+const (
+	delay       int64  = 3600
+	bucket      string = "data"
+	minioFolder string = "audio"
+)
 
 func main() {
 	log.Info("--- Start streamey ---")
 	log.Time()
 
+	// flags
 	url := flag.String("url", "", "Stream url")
-	maxBytes := flag.Int64("maxBytes", -1, "Max bytes to read from url.")
-	outputFilepath := flag.String("outputFilepath", "", "Output file path, if data should be dumped to file.")
-	reconnect := flag.Bool("reconnect", false, "Reconnect on any interruption.")
+	maxBytes := flag.Int64("maxBytes", -1, "[Optional] Max bytes to read from url.")
+	outputFilepath := flag.String("outputFilepath", "", "[Optional] Output file path, if data should be dumped to file.")
+	reconnect := flag.Bool("reconnect", false, "[Optional] Reconnect on any interruption.")
+	minioConfig := flag.String("minioConfig", "", "[Optional] Json config file for minio. Use minio if defined.")
 	flag.Parse()
 
-	config := network.DefaultRequestConfig()
-	//config.MaxBytes = 144000000
-	config.MaxBytes = *maxBytes
+	// read stream
+	go ReadStream(*url, *maxBytes, *outputFilepath, *reconnect)
 
-	// early exit
-	if *url == "" {
-		log.Info()
-		log.Error("Define url!")
-		flag.Usage()
+	// start minio sync
+	goRoutineCounter := 1
+	if *minioConfig != "" {
+		goRoutineCounter++
+
+		go ManageMinio(*minioConfig, delay, *outputFilepath, *reconnect)
+	}
+
+	// wait for go routines to be done
+	wg.Add(goRoutineCounter)
+	wg.Wait()
+}
+
+// stream
+
+func ReadStream(url string, maxBytes int64, outputFilepath string, reconnect bool) {
+	streamey.ReadStream(url, maxBytes, outputFilepath, reconnect)
+	wg.Done()
+}
+
+// minio
+
+func ManageMinio(configFile string, delay int64, localFolder string, loop bool) {
+	// read config
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		log.Error(err, "Minio config file does not exist.")
 		os.Exit(2)
 	}
 
-	// log infos
-	log.Info("Connect to url", *url)
-	if *maxBytes > 0 {
-		log.Info("Should stop after reading bytes:", *maxBytes)
-	} else {
-		log.Info("Will read data until connection breaks.")
-	}
-	if *outputFilepath != "" {
-		log.Info("Dump data to file:", outputFilepath)
+	var config miniomanager.MinioConfig
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		log.Error(err, "No valid minio config.")
+		os.Exit(2)
 	}
 
-	log.Info()
-	iteration := 0
+	useSsl := true
+	m := miniomanager.NewMinioManager(config, useSsl)
+
+	// run loop
+	duration := time.Duration(delay) * time.Second
 	for {
-		log.Info("Start connection")
-		log.Time()
-		r := network.NewRequester(config)
-		filepath := getFilePath(*outputFilepath, iteration, true)
-		r.ReadStream(*url, filepath)
-		log.Time()
-		log.Info()
-		if !*reconnect {
+		// start with the dalay
+		time.Sleep(duration)
+
+		// push
+		PushFiles(m, localFolder)
+
+		// delete
+		day := int64(3600 * 24)
+		m.DeleteFiles(bucket, minioFolder, 2*day)
+
+		if !loop {
 			break
 		}
-		iteration++
+	}
+	wg.Done()
+}
+
+func PushFiles(m *miniomanager.MinioManger, folder string) {
+	files := filesystem.ListFiles(folder, 0, true)
+
+	for _, file := range files {
+		m.PutFile(bucket, minioFolder, folder, file, true)
 	}
 }

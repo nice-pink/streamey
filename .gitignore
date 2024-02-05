@@ -8,3 +8,6 @@ push-docker-container.sh
 # folder
 bin/
 output/
+
+# random
+minio-secret.json

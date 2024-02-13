@@ -27,6 +27,7 @@ func main() {
 	filepath := flag.String("filepath", "", "File to stream.")
 	reconnect := flag.Bool("reconnect", false, "[Optional] Reconnect on any interruption.")
 	bitrate := flag.Int64("bitrate", 0, "Send bitrate.")
+	test := flag.Bool("test", false, "Test sending with internal reader.")
 	flag.Parse()
 
 	// read file
@@ -39,5 +40,26 @@ func main() {
 		log.Err(err, "Cannot read file.")
 	}
 
-	streamey.Stream(*url, float64(*bitrate), data, *reconnect)
+	goRoutineCounter := 0
+
+	if *test {
+		goRoutineCounter++
+		go Receive()
+	}
+
+	goRoutineCounter++
+	go Stream(*url, float64(*bitrate), data, *reconnect)
+
+	wg.Add(goRoutineCounter)
+	wg.Wait()
+}
+
+func Stream(url string, bitrate float64, data []byte, reconnect bool) {
+	streamey.Stream(url, bitrate, data, reconnect)
+	wg.Done()
+}
+
+func Receive() {
+	streamey.ReadTest(9999, true)
+	wg.Done()
 }

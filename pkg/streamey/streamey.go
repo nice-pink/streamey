@@ -1,63 +1,59 @@
 package streamey
 
 import (
-	"flag"
-	"os"
-	"strconv"
+	"net"
 	"time"
 
 	"github.com/nice-pink/goutil/pkg/log"
-	"github.com/nice-pink/goutil/pkg/network"
 )
 
-func ReadStream(url string, maxBytes int64, outputFilepath string, reconnect bool) {
-	config := network.DefaultRequestConfig()
-	//config.MaxBytes = 144000000
-	config.MaxBytes = maxBytes
-
-	// early exit
-	if url == "" {
-		log.Info()
-		log.Error("Define url!")
-		flag.Usage()
-		os.Exit(2)
+func Stream(address string, sendBitRate float64, buffer []byte) {
+	// connection
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		log.Error(err, "Can't dial.")
+		return
 	}
+	defer conn.Close()
 
-	// log infos
-	log.Info("Connect to url", url)
-	if maxBytes > 0 {
-		log.Info("Should stop after reading bytes:", maxBytes)
-	} else {
-		log.Info("Will read data until connection breaks.")
-	}
-	if outputFilepath != "" {
-		log.Info("Dump data to file:", outputFilepath)
-	}
+	// variables
+	var bytesWrittenCycle int = 0
+	var bytesWrittenTotal int64 = 0
+	streamStart := time.Now().UnixNano()
+	start := time.Now().UnixNano()
+	var byteIndex int64 = 0
+	var byteSegmentSize int64 = 1024
+	bufferLen := len(buffer)
 
-	log.Info()
-	iteration := 0
+	// run loop
+	var count int = 0
 	for {
-		log.Info("Start connection")
-		log.Time()
-		r := network.NewRequester(config)
-		filepath := getFilePath(outputFilepath, iteration, true)
-		r.ReadStream(url, filepath)
-		log.Time()
-		log.Info()
-		if !reconnect {
-			break
+		if byteIndex >= int64(bufferLen) {
+			byteIndex = 0
 		}
-		iteration++
-	}
-}
+		/*
+		 * calculate our instant rate over the entire transmit
+		 * duration
+		 */
+		rate := ((float64)(bytesWrittenTotal * 8)) / ((float64)(time.Now().UnixNano()-start) / 1000000000)
 
-func getFilePath(baseFilePath string, iteration int, addTimestamp bool) string {
-	if baseFilePath == "" {
-		return ""
+		// compare rate
+		if rate < sendBitRate {
+			// send data
+			bytesWrittenCycle, err = conn.Write(buffer[byteIndex:min(bufferLen, count*int(byteSegmentSize))])
+			if err != nil {
+				log.Error(err, "Could not send data.")
+				break
+			}
+			bytesWrittenTotal += int64(bytesWrittenCycle)
+			byteIndex += int64(bytesWrittenCycle)
+
+			count++
+		}
 	}
-	if addTimestamp {
-		now := time.Now()
-		baseFilePath += "_" + strconv.FormatInt(now.Unix(), 10)
-	}
-	return baseFilePath + "_" + strconv.Itoa(iteration)
+
+	// final log
+	streamStop := time.Now().UnixNano()
+	passed := streamStart - streamStop
+	log.Info("Stopped sending. Bytes:", bytesWrittenTotal, ". Seconds:", passed)
 }

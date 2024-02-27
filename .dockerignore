@@ -2,5 +2,12 @@
 .git/
 .gitignore
 
+# files
+.env
+minio-secret.json
+push-docker-container.sh
+
 # bin
 bin/
+output/
+test_files/

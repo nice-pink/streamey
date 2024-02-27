@@ -47,5 +47,7 @@ func main() {
 	}
 
 	encoding := audio.GetMp3Encoding(header)
-	audio.GetEncodedUnits(data, 0, encoding, true)
+	audioInfo := audio.GetAudioInfos(data, 0, encoding, true)
+	log.Info()
+	audioInfo.Print()
 }

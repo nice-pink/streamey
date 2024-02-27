@@ -144,10 +144,10 @@ func GetMp3Encoding(header MpegHeader) Encoding {
 	}
 }
 
-func GetEncodedUnits(data []byte, offset uint64, encoding Encoding, printHeaders bool) []UnitInfo {
+func GetAudioInfos(data []byte, offset uint64, encoding Encoding, printHeaders bool) AudioInfos {
+	audioInfos := AudioInfos{Encoding: encoding, Units: []UnitInfo{}, IsCBR: true, IsSampleRateConstant: true}
 	dataSize := len(data)
 
-	var units = []UnitInfo{}
 	var index uint64 = 0
 	for {
 		// exit?
@@ -169,6 +169,14 @@ func GetEncodedUnits(data []byte, offset uint64, encoding Encoding, printHeaders
 			continue
 		}
 
+		// validate
+		if header.SampleRate != encoding.SampleRate {
+			audioInfos.IsSampleRateConstant = false
+		}
+		if header.Bitrate != encoding.Bitrate {
+			audioInfos.IsCBR = false
+		}
+
 		// print frame headers
 		if printHeaders {
 			header.Print(false)
@@ -180,11 +188,11 @@ func GetEncodedUnits(data []byte, offset uint64, encoding Encoding, printHeaders
 		}
 
 		// append unit
-		units = append(units, UnitInfo{Index: index, Size: frameSize})
+		audioInfos.Units = append(audioInfos.Units, UnitInfo{Index: index, Size: frameSize})
 		index += uint64(frameSize)
 	}
 
-	return units
+	return audioInfos
 }
 
 func GetMpegFrameSize(data []byte, header MpegHeader, requiredSampleRate int, frameSizeSamples int) int {

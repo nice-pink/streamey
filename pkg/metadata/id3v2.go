@@ -47,8 +47,8 @@ func HasIdV3Footer(data []byte) bool {
 }
 
 func GetIdV3HeaderSize(data []byte) int32 {
-	bits := util.BitsFromBytes(data, 48, 32)
-	headerValue := binary.BigEndian.Uint32(bits)
+	bytes := data[6:10]
+	headerValue := binary.BigEndian.Uint32(bytes)
 
 	footerSize := 0
 	if HasIdV3Footer(data) {

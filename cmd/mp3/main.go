@@ -7,6 +7,7 @@ import (
 
 	"github.com/nice-pink/goutil/pkg/log"
 	"github.com/nice-pink/streamey/pkg/audio"
+	"github.com/nice-pink/streamey/pkg/metadata"
 )
 
 func main() {
@@ -32,10 +33,13 @@ func main() {
 
 	// skip metadata if any
 
-	// metaSize := metadata.GetIdV3HeaderSize(data)
-	// if metaSize > 0 {
-	// 	data = data[metaSize:]
-	// }
+	metaSize := 0
+	if metadata.StartsWithIdV3Sync(data) {
+		metaSize = int(metadata.GetIdV3HeaderSize(data))
+		if metaSize > 0 {
+			data = data[metaSize:]
+		}
+	}
 
 	// get frame infos
 

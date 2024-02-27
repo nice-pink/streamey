@@ -7,6 +7,14 @@ import (
 	"github.com/nice-pink/streamey/pkg/util"
 )
 
+type AudioType int
+
+const (
+	AudioTypeUnknown AudioType = iota
+	AudioTypeMp3
+	AudioTypeAAC
+)
+
 // encoding
 
 type Encoding struct {
@@ -44,6 +52,7 @@ type AudioInfos struct {
 	Units                []UnitInfo
 	IsCBR                bool
 	IsSampleRateConstant bool
+	ContainsTag          bool
 	Encoding             Encoding
 }
 
@@ -53,4 +62,5 @@ func (a AudioInfos) Print() {
 	fmt.Println("Is CBR: ", util.YesNo(a.IsCBR))
 	fmt.Println("Is sample rate constant: ", util.YesNo(a.IsSampleRateConstant))
 	fmt.Println("Unit count: ", strconv.Itoa(len(a.Units)))
+	fmt.Println("Contains tag: ", util.YesNo(a.ContainsTag))
 }

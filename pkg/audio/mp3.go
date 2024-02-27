@@ -215,7 +215,7 @@ func GetMpegPacketSize(bitrate int, sampleRate int, frameSizeSamples int, paddin
 		bytesPerFrame = frameSizeSamples / 8
 	}
 
-	packet := float64(bytesPerFrame) * float64(bitrate) / float64(sampleRate+padding)
+	packet := float64(bytesPerFrame) * float64(bitrate*1000) / float64(sampleRate+padding)
 	return int(packet)
 }
 

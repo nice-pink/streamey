@@ -7,7 +7,6 @@ import (
 
 	"github.com/nice-pink/goutil/pkg/log"
 	"github.com/nice-pink/streamey/pkg/audio"
-	"github.com/nice-pink/streamey/pkg/metadata"
 )
 
 func main() {
@@ -31,27 +30,6 @@ func main() {
 		log.Err(err, "Cannot read file.")
 	}
 
-	// skip metadata if any
-
-	metaSize := 0
-	if metadata.StartsWithIdV3Sync(data) {
-		metaSize = int(metadata.GetIdV3HeaderSize(data))
-		if metaSize > 0 {
-			data = data[metaSize:]
-		}
-	}
-
-	// get frame infos
-
-	header := audio.GetMpegHeader(data)
-	if !header.IsValid() {
-		log.Error("Header is not valid")
-		header.Print(false)
-		os.Exit(2)
-	}
-
-	encoding := audio.GetMp3Encoding(header)
-	audioInfo := audio.GetAudioInfos(data, 0, encoding, true)
-	log.Info()
-	audioInfo.Print()
+	// parse audio
+	audio.Parse(data)
 }

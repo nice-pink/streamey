@@ -6,39 +6,39 @@ import (
 	"github.com/nice-pink/streamey/pkg/util"
 )
 
-type IdV3Tag struct {
+type Id3V2Tag struct {
 	TagSize int32
 }
 
 const (
 	HeaderSize int    = 10
-	Id3V3Sync  string = "494433"
+	Id3V2Sync  string = "494433"
 	FooterMask string = "10"
 )
 
-func GetTag(data []byte) IdV3Tag {
-	var tag IdV3Tag
-	tag.TagSize = GetIdV3HeaderSize(data)
+func GetId3V2Tag(data []byte) Id3V2Tag {
+	var tag Id3V2Tag
+	tag.TagSize = GetId3V2TagSize(data)
 	return tag
 }
 
-func IsValidIdV3Header(data []byte) bool {
+func IsValidId3V2Header(data []byte) bool {
 	if len(data) < HeaderSize {
 		return false
 	}
 
-	if !StartsWithIdV3Sync(data) {
+	if !StartsWithId3V2Sync(data) {
 		return false
 	}
 
 	return true
 }
 
-func StartsWithIdV3Sync(data []byte) bool {
-	return util.BytesEqualHex(Id3V3Sync, data)
+func StartsWithId3V2Sync(data []byte) bool {
+	return util.BytesEqualHex(Id3V2Sync, data)
 }
 
-func HasIdV3Footer(data []byte) bool {
+func HasId3V2Footer(data []byte) bool {
 	if len(data) < 6 {
 		return false
 	}
@@ -46,12 +46,12 @@ func HasIdV3Footer(data []byte) bool {
 	return util.BytesEqualHexWithMask(FooterMask, FooterMask, bytes)
 }
 
-func GetIdV3HeaderSize(data []byte) int32 {
+func GetId3V2TagSize(data []byte) int32 {
 	bytes := data[6:10]
 	headerValue := binary.BigEndian.Uint32(bytes)
 
 	footerSize := 0
-	if HasIdV3Footer(data) {
+	if HasId3V2Footer(data) {
 		footerSize = HeaderSize
 	}
 

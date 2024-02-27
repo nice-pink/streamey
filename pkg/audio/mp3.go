@@ -553,3 +553,13 @@ func GetMpegChannelModeString(cm ChannelMode) string {
 func GetMpegFrameSizeSamples() int {
 	return 1152
 }
+
+func SetMpegPrivate(header []byte) {
+	var mask uint8 = 1
+	header[2] = header[2] | mask
+}
+
+func SetMpegUnPrivate(header []byte) {
+	var mask uint8 = 14
+	header[2] = header[2] & mask
+}

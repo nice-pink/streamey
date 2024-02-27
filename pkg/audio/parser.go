@@ -41,6 +41,12 @@ func Parse(data []byte) {
 	}
 }
 
+func MakeFirstFramePrivate(data []byte, audioType AudioType) {
+	if audioType == AudioTypeMp3 {
+		SetMpegPrivate(data)
+	}
+}
+
 func ParseMp3(data []byte, hasTag bool) {
 	// skip metadata if any
 	// metaSize := 0

@@ -57,9 +57,10 @@ type MpegHeader struct {
 	Copyright     bool
 	Original      bool
 	Emphasis      int8
+	Size          int
 }
 
-func GetHeader(data []byte) MpegHeader {
+func GetMpegHeader(data []byte) MpegHeader {
 	header := MpegHeader{}
 
 	// version
@@ -105,6 +106,9 @@ func GetHeader(data []byte) MpegHeader {
 	emphasis := util.BitsFromBytes(data, 30, 2)
 	header.Emphasis = int8(emphasis[0])
 
+	// size
+	header.Size = GetMpegFrameSize(data, header, 0, GetMpegFrameSizeSamples())
+
 	return header
 }
 
@@ -113,6 +117,7 @@ func StartsWithMpegSync(data []byte) bool {
 }
 
 func (h MpegHeader) Print(extended bool) {
+	fmt.Println("---------------")
 	label := "Mp3 " + GetMpegVersionString(h.MpegVersion) + "-" + GetMpegLayerString(h.Layer)
 	fmt.Println(label)
 	fmt.Println("Bitrate: " + GetBitrateString(h.Bitrate))
@@ -123,60 +128,83 @@ func (h MpegHeader) Print(extended bool) {
 		fmt.Println("Original: " + util.YesNo(h.Original))
 		fmt.Println("Protected: " + util.YesNo(h.Protected))
 	}
+	fmt.Println("Size: " + strconv.Itoa(h.Size))
 }
 
 //
 
-func GetEncodedUnits(data []byte, offset uint64, encoding AudioEncoding) []UnitInfo {
+func GetMp3Encoding(header MpegHeader) Encoding {
+	return Encoding{
+		ContainerName: "mp3",
+		CodecName:     "mp3",
+		Bitrate:       header.Bitrate,
+		SampleRate:    header.SampleRate,
+		FrameSize:     GetMpegFrameSizeSamples(),
+		IsStereo:      header.ChannelMode < 3,
+	}
+}
+
+func GetEncodedUnits(data []byte, offset uint64, encoding Encoding, printHeaders bool) []UnitInfo {
 	dataSize := len(data)
 
 	var units = []UnitInfo{}
 	var index uint64 = 0
 	for {
+		// exit?
 		if index >= uint64(dataSize)-uint64(HeaderSize) {
 			break
 		}
 
+		// find sync header
 		if !StartsWithMpegSync(data[index:]) {
 			index++
 			continue
 		}
 
-		frameSize := GetFrameSize(data[index:], encoding.SampleRate, encoding.FrameSize)
+		// get frame size
+		header := GetMpegHeader(data[index:])
+		frameSize := GetMpegFrameSize(data[index:], header, encoding.SampleRate, encoding.FrameSize)
 		if frameSize <= 0 {
 			index++
 			continue
 		}
 
+		// print frame headers
+		if printHeaders {
+			header.Print(false)
+		}
+
+		// exit if frame is not complete
 		if index >= uint64(dataSize)-uint64(frameSize) {
 			break
 		}
 
+		// append unit
 		units = append(units, UnitInfo{Index: index, Size: frameSize})
+		index += uint64(frameSize)
 	}
 
 	return units
 }
 
-func GetFrameSize(data []byte, sampleRate int, frameSize int) int {
-	header := GetHeader(data)
+func GetMpegFrameSize(data []byte, header MpegHeader, requiredSampleRate int, frameSizeSamples int) int {
 	if header.Layer == MpegLayerReserved || header.MpegVersion == MpegVersionReserved || header.Bitrate < 0 || header.SampleRate < 0 {
 		return 0
 	}
 
-	if sampleRate > 0 && header.SampleRate != sampleRate {
+	if requiredSampleRate > 0 && header.SampleRate != requiredSampleRate {
 		return -1
 	}
 
-	return GetPacketSize(header.Bitrate, header.SampleRate, frameSize, 8)
+	return GetMpegPacketSize(header.Bitrate, header.SampleRate, frameSizeSamples, 8)
 }
 
-func GetPacketSize(bitrate int, sampleRate int, frameSize int, padding int) int {
+func GetMpegPacketSize(bitrate int, sampleRate int, frameSizeSamples int, padding int) int {
 	var bytesPerFrame int
-	if frameSize == 0 {
+	if frameSizeSamples == 0 {
 		bytesPerFrame = 144
 	} else {
-		bytesPerFrame = frameSize / 8
+		bytesPerFrame = frameSizeSamples / 8
 	}
 
 	packet := float64(bytesPerFrame) * float64(bitrate) / float64(sampleRate+padding)
@@ -512,4 +540,8 @@ func GetMpegChannelModeString(cm ChannelMode) string {
 		return "DualChannel"
 	}
 	return "Mono"
+}
+
+func GetMpegFrameSizeSamples() int {
+	return 1152
 }

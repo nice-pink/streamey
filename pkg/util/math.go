@@ -55,7 +55,7 @@ func BytesEqualHex(h string, compare []byte) bool {
 	// compare
 	for i, b := range value {
 		if compare[i] != b {
-			fmt.Println(int8(compare[i]) != int8(b))
+			// fmt.Println(int8(compare[i]) != int8(b))
 			return false
 		}
 	}
@@ -84,7 +84,7 @@ func BytesEqualHexWithMask(h string, mask string, compare []byte) bool {
 	// compare
 	for i, b := range value {
 		if compare[i]&valueMask[i] != b {
-			fmt.Println(int8(compare[i]&valueMask[i]) != int8(b))
+			// fmt.Println(int8(compare[i]&valueMask[i]) != int8(b))
 			return false
 		}
 	}

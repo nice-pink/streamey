@@ -2,7 +2,7 @@ package audio
 
 // encoding
 
-type AudioEncoding struct {
+type Encoding struct {
 	ContainerName string // e.g. wav, mpeg, aac, ...
 	CodecName     string
 	SampleRate    int
@@ -12,7 +12,7 @@ type AudioEncoding struct {
 	FrameSize     int    // samples per frame
 }
 
-func IsEncoded(e AudioEncoding) bool {
+func IsEncoded(e Encoding) bool {
 	return e.CodecName != ""
 }
 

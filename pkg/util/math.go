@@ -94,8 +94,10 @@ func BytesEqualHexWithMask(h string, mask string, compare []byte) bool {
 // unsynchsafe
 func Unsynchsafe(value uint32) uint32 {
 	var out uint32 = 0
-	tmp, err := strconv.ParseInt("7F000000", 10, 32)
+	hex := "7F000000"
+	tmp, err := strconv.ParseInt(hex, 16, 64)
 	if err != nil {
+		fmt.Println(err)
 		return 0
 	}
 	var mask uint32 = uint32(tmp)

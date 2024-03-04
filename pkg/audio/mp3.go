@@ -148,7 +148,7 @@ func GetAudioInfos(data []byte, offset uint64, encoding Encoding, printHeaders b
 	audioInfos := AudioInfos{Encoding: encoding, Units: []UnitInfo{}, IsCBR: true, IsSampleRateConstant: true}
 	dataSize := len(data)
 
-	var index uint64 = 0
+	var index uint64 = offset
 	for {
 		// exit?
 		if index >= uint64(dataSize)-uint64(HeaderSize) {
@@ -217,6 +217,35 @@ func GetMpegPacketSize(bitrate int, sampleRate int, frameSizeSamples int, paddin
 
 	packet := float64(bytesPerFrame) * float64(bitrate*1000) / float64(sampleRate+padding)
 	return int(packet)
+}
+
+func GetNextFrameIndexMpeg(data []byte, offset uint64) int64 {
+	dataSize := len(data)
+	var index int64 = int64(offset)
+	for {
+		// exit?
+		if index >= int64(dataSize)-int64(HeaderSize) {
+			fmt.Println(index, dataSize)
+			break
+		}
+
+		// find sync header
+		if !StartsWithMpegSync(data[index:]) {
+			index++
+			continue
+		}
+
+		// get frame size
+		header := GetMpegHeader(data[index:])
+		frameSize := GetMpegFrameSize(data[index:], header, -1, 0)
+		if frameSize <= 0 {
+			index++
+			continue
+		}
+
+		return index
+	}
+	return -1
 }
 
 //

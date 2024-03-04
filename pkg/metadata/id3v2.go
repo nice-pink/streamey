@@ -54,6 +54,5 @@ func GetId3V2TagSize(data []byte) int32 {
 	if HasId3V2Footer(data) {
 		footerSize = HeaderSize
 	}
-
 	return int32(util.Unsynchsafe(headerValue)) + int32(footerSize)
 }

@@ -31,5 +31,5 @@ func main() {
 	}
 
 	// parse audio
-	audio.Parse(data)
+	audio.Parse(data, *filepath)
 }

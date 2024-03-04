@@ -32,4 +32,21 @@ func main() {
 
 	// parse audio
 	audio.Parse(data, *filepath)
+
+	// parse continuously
+	// Continuous(data)
+}
+
+func Continuous(data []byte) {
+	dataSize := len(data)
+	index := 0
+	for {
+		if index >= dataSize {
+			break
+		}
+		iMax := min(index+1024, dataSize)
+		audio.ParseContinuous(data[index:iMax], audio.AudioTypeMp3)
+
+		index = iMax
+	}
 }

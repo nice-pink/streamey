@@ -144,7 +144,7 @@ func GetMp3Encoding(header MpegHeader) Encoding {
 	}
 }
 
-func GetAudioInfos(data []byte, offset uint64, encoding Encoding, printHeaders bool) AudioInfos {
+func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, printHeaders bool) AudioInfos {
 	audioInfos := AudioInfos{Encoding: encoding, Units: []UnitInfo{}, IsCBR: true, IsSampleRateConstant: true}
 	dataSize := len(data)
 
@@ -183,7 +183,7 @@ func GetAudioInfos(data []byte, offset uint64, encoding Encoding, printHeaders b
 		}
 
 		// exit if frame is not complete
-		if index >= uint64(dataSize)-uint64(frameSize) {
+		if index+uint64(frameSize) >= uint64(dataSize) {
 			break
 		}
 

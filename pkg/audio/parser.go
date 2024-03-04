@@ -181,10 +181,10 @@ func ParseContinuous(data []byte, audioTypeGuessed AudioType) error {
 		bytesTotal += i
 		fmt.Println("Remove until", i)
 		currentData = currentData[i:]
+		unitsTotal += uint64(units)
 	} else {
 		return nil
 	}
-	unitsTotal += uint64(units)
 
 	// log infos
 	fmt.Println()

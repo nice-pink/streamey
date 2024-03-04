@@ -46,11 +46,11 @@ func GuessAudioType(path string) AudioType {
 	return AudioTypeUnknown
 }
 
-func GetFirstFrameIndex(data []byte, offset uint64, audioTypeGuessed AudioType) uint64 {
+func GetFirstFrameIndex(data []byte, offset uint64, audioTypeGuessed AudioType) int64 {
 	if audioTypeGuessed == AudioTypeMp3 {
-		return uint64(GetNextFrameIndexMpeg(data, offset))
+		return GetNextFrameIndexMpeg(data, offset)
 	}
-	return offset
+	return int64(offset)
 }
 
 func GetAudioType(data []byte) AudioType {
@@ -81,8 +81,11 @@ func Parse(data []byte, filepath string) {
 	}
 	audioTypeGuessed := GuessAudioType(filepath)
 	firstFrameIndex := GetFirstFrameIndex(data, uint64(audioStart), audioTypeGuessed)
-	skippedUntilFirstFrame = firstFrameIndex - uint64(tagSize)
-	foundFirstFrame = firstFrameIndex > uint64(audioStart)
+	if firstFrameIndex < 0 {
+		return
+	}
+	skippedUntilFirstFrame = uint64(firstFrameIndex - tagSize)
+	foundFirstFrame = firstFrameIndex > audioStart
 
 	// get audio
 	audioType = GetAudioType(data[firstFrameIndex:])
@@ -102,9 +105,9 @@ func Parse(data []byte, filepath string) {
 	fmt.Println()
 	audioInfo.ContainsTag = hasTag
 	audioInfo.Print()
+
 	unitsTotal = uint64(len(audioInfo.Units))
-	units := len(audioInfo.Units)
-	bytesTotal = audioInfo.Units[units-1].Index + uint64(audioInfo.Units[units-1].Size)
+	bytesTotal = audioInfo.Units[unitsTotal-1].Index + uint64(audioInfo.Units[unitsTotal-1].Size)
 
 	// log
 	fullDataSize = uint64(len(data))
@@ -123,7 +126,7 @@ func ParseContinuous(data []byte, audioTypeGuessed AudioType) error {
 	fullDataSize += uint64(len(data))
 	currentData = append(currentData, data...)
 	dataSize := len(currentData)
-	var offset uint64 = 0
+	var offset int64 = 0
 
 	// skip tag
 	if !skippedTag && currentTagIndex <= tagSize {
@@ -140,7 +143,6 @@ func ParseContinuous(data []byte, audioTypeGuessed AudioType) error {
 
 		// skip tag
 		if tagSize-currentTagIndex < int64(dataSize) {
-
 			tagEnd = tagSize - currentTagIndex
 			currentTagIndex = tagSize - 1
 			skippedTag = true
@@ -152,9 +154,11 @@ func ParseContinuous(data []byte, audioTypeGuessed AudioType) error {
 		}
 	}
 
-	// parse audio
+	// get audio offset
 	offset = GetFirstFrameIndex(currentData, uint64(tagEnd), audioTypeGuessed)
-	skippedUntilFirstFrame = offset - uint64(tagEnd)
+	if offset < 0 {
+		return nil
+	}
 
 	if !foundFirstFrame {
 		// get audio
@@ -163,10 +167,12 @@ func ParseContinuous(data []byte, audioTypeGuessed AudioType) error {
 			fmt.Println("Unknown audio type.")
 			return nil
 		}
-
-		foundFirstFrame = offset >= uint64(tagEnd)
+		foundFirstFrame = offset >= tagEnd
+		skippedUntilFirstFrame = uint64(offset - tagEnd)
+		tagEnd = 0
 	}
 
+	// parse audio
 	var audioInfo AudioInfos
 	if audioType == AudioTypeMp3 {
 		audioInfo = ParseMp3(currentData[offset:])
@@ -177,21 +183,16 @@ func ParseContinuous(data []byte, audioTypeGuessed AudioType) error {
 	// remove handled data from
 	units := len(audioInfo.Units)
 	if units > 0 {
-		i := audioInfo.Units[units-1].Index + uint64(audioInfo.Units[units-1].Size)
+		i := audioInfo.Units[units-1].Index + uint64(audioInfo.Units[units-1].Size) + uint64(offset)
 		bytesTotal += i
-		fmt.Println("Remove until", i)
-		currentData = currentData[i:]
 		unitsTotal += uint64(units)
-	} else {
-		return nil
+		currentData = currentData[i:]
 	}
 
 	// log infos
 	fmt.Println()
 	audioInfo.ContainsTag = hasTag
 	audioInfo.Print()
-
-	fmt.Println("total:", unitsTotal)
 
 	LogResult("")
 

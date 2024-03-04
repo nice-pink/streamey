@@ -151,7 +151,7 @@ func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, printHeade
 	var index uint64 = offset
 	for {
 		// exit?
-		if index >= uint64(dataSize)-uint64(HeaderSize) {
+		if index+uint64(HeaderSize) > uint64(dataSize) {
 			break
 		}
 
@@ -183,7 +183,7 @@ func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, printHeade
 		}
 
 		// exit if frame is not complete
-		if index+uint64(frameSize) >= uint64(dataSize) {
+		if index+uint64(frameSize) > uint64(dataSize) {
 			break
 		}
 
@@ -216,6 +216,7 @@ func GetMpegPacketSize(bitrate int, sampleRate int, frameSizeSamples int, paddin
 	}
 
 	packet := float64(bytesPerFrame) * float64(bitrate*1000) / float64(sampleRate+padding)
+
 	return int(packet)
 }
 
@@ -224,8 +225,7 @@ func GetNextFrameIndexMpeg(data []byte, offset uint64) int64 {
 	var index int64 = int64(offset)
 	for {
 		// exit?
-		if index >= int64(dataSize)-int64(HeaderSize) {
-			fmt.Println(index, dataSize)
+		if index+int64(HeaderSize) > int64(dataSize) {
 			break
 		}
 

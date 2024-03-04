@@ -31,10 +31,10 @@ func main() {
 	}
 
 	// parse audio
-	audio.Parse(data, *filepath)
+	// audio.Parse(data, *filepath)
 
 	// parse continuously
-	// Continuous(data)
+	Continuous(data)
 }
 
 func Continuous(data []byte) {

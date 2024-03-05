@@ -22,3 +22,8 @@ cd ../..
 cd cmd/mp3
 go build -o ../../bin
 cd ../..
+
+# build manipuley
+cd cmd/manipuley
+go build -o ../../bin
+cd ../..

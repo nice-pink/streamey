@@ -144,7 +144,7 @@ func GetMp3Encoding(header MpegHeader) Encoding {
 	}
 }
 
-func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, printHeaders bool) AudioInfos {
+func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, printHeaders bool, verbose bool) AudioInfos {
 	audioInfos := AudioInfos{Encoding: encoding, Units: []UnitInfo{}, IsCBR: true, IsSampleRateConstant: true}
 	dataSize := len(data)
 
@@ -179,7 +179,7 @@ func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, printHeade
 
 		// print frame headers
 		if printHeaders {
-			header.Print(false)
+			header.Print(verbose)
 		}
 
 		// exit if frame is not complete
@@ -583,12 +583,12 @@ func GetMpegFrameSizeSamples() int {
 	return 1152
 }
 
-func SetMpegPrivate(header []byte) {
+func SetMpegPrivate(header []byte, offset uint64) {
 	var mask uint8 = 1
-	header[2] = header[2] | mask
+	header[offset+2] = header[offset+2] | mask
 }
 
-func SetMpegUnPrivate(header []byte) {
+func SetMpegUnPrivate(header []byte, offset uint64) {
 	var mask uint8 = 14
-	header[2] = header[2] & mask
+	header[offset+2] = header[offset+2] & mask
 }

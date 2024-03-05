@@ -11,6 +11,8 @@ import (
 
 func main() {
 	filepath := flag.String("filepath", "", "Filepath")
+	block := flag.Bool("block", false, "Parse file in blocks.")
+	verbose := flag.Bool("verbose", false, "Make output verbose.")
 	flag.Parse()
 
 	// get file data
@@ -30,14 +32,16 @@ func main() {
 		log.Err(err, "Cannot read file.")
 	}
 
-	// parse audio
-	// audio.Parse(data, *filepath)
-
-	// parse continuously
-	Continuous(data)
+	if *block {
+		// parse continuously
+		Blockwise(data, *verbose)
+	} else {
+		// parse audio
+		audio.Parse(data, *filepath, *verbose)
+	}
 }
 
-func Continuous(data []byte) {
+func Blockwise(data []byte, verbose bool) {
 	dataSize := len(data)
 	index := 0
 	for {
@@ -45,7 +49,7 @@ func Continuous(data []byte) {
 			break
 		}
 		iMax := min(index+1024, dataSize)
-		audio.ParseContinuous(data[index:iMax], audio.AudioTypeMp3)
+		audio.ParseBlockwise(data[index:iMax], audio.AudioTypeMp3, verbose)
 
 		index = iMax
 	}

@@ -14,7 +14,6 @@ var (
 	fullDataSize uint64 = 0
 	currentData  []byte
 	// tag
-	hasTag          bool  = false
 	skippedTag      bool  = false
 	tagSize         int64 = 0
 	currentTagIndex int64 = 0
@@ -63,7 +62,7 @@ func GetAudioType(data []byte) AudioType {
 
 // parse
 
-func Parse(data []byte, filepath string) {
+func Parse(data []byte, filepath string, verbose bool) *AudioInfos {
 	// skip tag
 	tagSize = metadata.GetTagSize(data)
 	if tagSize < 0 {
@@ -72,7 +71,6 @@ func Parse(data []byte, filepath string) {
 	} else if tagSize > 0 {
 		fmt.Println("Tag size:", tagSize)
 	}
-	hasTag = tagSize > 0
 
 	// parse audio
 	var audioStart int64 = 0
@@ -82,7 +80,7 @@ func Parse(data []byte, filepath string) {
 	audioTypeGuessed := GuessAudioType(filepath)
 	firstFrameIndex := GetFirstFrameIndex(data, uint64(audioStart), audioTypeGuessed)
 	if firstFrameIndex < 0 {
-		return
+		return nil
 	}
 	skippedUntilFirstFrame = uint64(firstFrameIndex - tagSize)
 	foundFirstFrame = firstFrameIndex > audioStart
@@ -91,19 +89,20 @@ func Parse(data []byte, filepath string) {
 	audioType = GetAudioType(data[firstFrameIndex:])
 	if audioType == AudioTypeUnknown {
 		fmt.Println("Unknown audio type.")
-		return
+		return nil
 	}
 
 	var audioInfo AudioInfos
 	if audioType == AudioTypeMp3 {
-		audioInfo = ParseMp3(data[firstFrameIndex:])
+		audioInfo = ParseMp3(data[firstFrameIndex:], verbose)
 
 	} else if audioType == AudioTypeAAC {
 		fmt.Println("Not jet implemented!")
 	}
 
 	fmt.Println()
-	audioInfo.ContainsTag = hasTag
+	audioInfo.TagSize = tagSize
+	audioInfo.FirstFrameIndex = tagSize + int64(skippedUntilFirstFrame)
 	audioInfo.Print()
 
 	unitsTotal = uint64(len(audioInfo.Units))
@@ -112,17 +111,11 @@ func Parse(data []byte, filepath string) {
 	// log
 	fullDataSize = uint64(len(data))
 	LogResult(filepath)
-	// dataSize := len(data)
-	// fmt.Println()
-	// fmt.Println("---")
-	// fmt.Println("File path:", filepath)
-	// fmt.Println("File size:", dataSize)
-	// fmt.Println("Tag size:", tagSize)
-	// fmt.Println("Skipped bytes to first frame:", firstFrameIndex-uint64(tagSize))
-	// fmt.Println("Audio size:", dataSize-int(firstFrameIndex))
+
+	return &audioInfo
 }
 
-func ParseContinuous(data []byte, audioTypeGuessed AudioType) error {
+func ParseBlockwise(data []byte, audioTypeGuessed AudioType, verbose bool) error {
 	fullDataSize += uint64(len(data))
 	currentData = append(currentData, data...)
 	dataSize := len(currentData)
@@ -139,7 +132,6 @@ func ParseContinuous(data []byte, audioTypeGuessed AudioType) error {
 				fmt.Println("Tag size:", tagSize)
 			}
 		}
-		hasTag = tagSize > 0
 
 		// skip tag
 		if tagSize-currentTagIndex < int64(dataSize) {
@@ -175,7 +167,7 @@ func ParseContinuous(data []byte, audioTypeGuessed AudioType) error {
 	// parse audio
 	var audioInfo AudioInfos
 	if audioType == AudioTypeMp3 {
-		audioInfo = ParseMp3(currentData[offset:])
+		audioInfo = ParseMp3(currentData[offset:], verbose)
 	} else if audioType == AudioTypeAAC {
 		fmt.Println("Not jet implemented!")
 	}
@@ -191,7 +183,7 @@ func ParseContinuous(data []byte, audioTypeGuessed AudioType) error {
 
 	// log infos
 	fmt.Println()
-	audioInfo.ContainsTag = hasTag
+	audioInfo.TagSize = tagSize
 	audioInfo.Print()
 
 	LogResult("")
@@ -214,13 +206,13 @@ func LogResult(filepath string) {
 	fmt.Println("Bytes frames:", bytesTotal)
 }
 
-func MakeFirstFramePrivate(data []byte, audioType AudioType) {
+func MakeFirstFramePrivate(data []byte, offset uint64, audioType AudioType) {
 	if audioType == AudioTypeMp3 {
-		SetMpegPrivate(data)
+		SetMpegPrivate(data, offset)
 	}
 }
 
-func ParseMp3(data []byte) AudioInfos {
+func ParseMp3(data []byte, verbose bool) AudioInfos {
 	// get frame infos
 	header := GetMpegHeader(data)
 	if !header.IsValid() {
@@ -230,6 +222,6 @@ func ParseMp3(data []byte) AudioInfos {
 	}
 
 	encoding := GetMp3Encoding(header)
-	audioInfo := GetAudioInfosMpeg(data, 0, encoding, true)
+	audioInfo := GetAudioInfosMpeg(data, 0, encoding, true, verbose)
 	return audioInfo
 }

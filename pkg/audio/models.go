@@ -52,8 +52,9 @@ type AudioInfos struct {
 	Units                []UnitInfo
 	IsCBR                bool
 	IsSampleRateConstant bool
-	ContainsTag          bool
 	Encoding             Encoding
+	TagSize              int64
+	FirstFrameIndex      int64
 }
 
 func (a AudioInfos) Print() {
@@ -62,5 +63,5 @@ func (a AudioInfos) Print() {
 	fmt.Println("Is CBR: ", util.YesNo(a.IsCBR))
 	fmt.Println("Is sample rate constant: ", util.YesNo(a.IsSampleRateConstant))
 	fmt.Println("Unit count: ", strconv.Itoa(len(a.Units)))
-	fmt.Println("Contains tag: ", util.YesNo(a.ContainsTag))
+	fmt.Println("Tag size: ", a.TagSize)
 }

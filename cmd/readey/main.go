@@ -72,7 +72,7 @@ func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bo
 		expectations.Print()
 		log.Info("###")
 		log.Info()
-		validator = *audio.NewValidator(expectations, verbose)
+		validator = *audio.NewValidator(false, expectations, verbose)
 	}
 	network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator)
 	wg.Done()

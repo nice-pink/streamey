@@ -101,11 +101,9 @@ func ReadLineByLine(url string, dumpToFile string, timeout time.Duration, maxByt
 		}
 
 		// validate
-		if dataValidator != nil {
-			validationErr := dataValidator.Validate(line, true)
-			if validationErr != nil {
-				return validationErr
-			}
+		validationErr := dataValidator.Validate(line, true)
+		if validationErr != nil {
+			return validationErr
 		}
 
 		bytesRead += uint64(len(line))

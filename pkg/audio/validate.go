@@ -9,13 +9,20 @@ import (
 type Validator struct {
 	expectations Expectations
 	verbose      bool
+	active       bool
 }
 
-func NewValidator(e Expectations, v bool) *Validator {
-	return &Validator{expectations: e, verbose: v}
+func NewValidator(active bool, expectations Expectations, verbose bool) *Validator {
+	return &Validator{expectations: expectations, verbose: verbose, active: active}
 }
 
 func (v Validator) Validate(data []byte, failEarly bool) error {
+	// bypass?
+	if !v.active {
+		return nil
+	}
+
+	// validate
 	blockAudioInfo, err := ParseBlockwise(data, GetAudioTypeFromCodecName(v.expectations.Encoding.CodecName), true, v.verbose, false)
 	if err != nil {
 		log.Err(err, "Parsing error.")

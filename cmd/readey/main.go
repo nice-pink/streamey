@@ -65,7 +65,7 @@ func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bo
 		expectations := audio.Expectations{
 			IsCBR: true,
 			Encoding: audio.Encoding{
-				Bitrate:  192,
+				Bitrate:  256,
 				IsStereo: true,
 			},
 		}

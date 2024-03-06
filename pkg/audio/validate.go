@@ -27,8 +27,15 @@ func (v Validator) Validate(data []byte, failEarly bool) error {
 		return nil
 	}
 
+	// validate audio info
+	isValid := IsValid(v.expectations, *blockAudioInfo)
+	if !isValid && failEarly {
+		return errors.New("validation failed")
+	}
+
+	// validate encodings
 	for _, unit := range blockAudioInfo.Units {
-		isValid := IsValidEncoding(v.expectations, unit.Encoding)
+		isValid = IsValidEncoding(v.expectations, unit.Encoding)
 		if !isValid && failEarly {
 			return errors.New("validation failed")
 		}
@@ -39,12 +46,12 @@ func (v Validator) Validate(data []byte, failEarly bool) error {
 
 func IsValid(expectations Expectations, audioInfo AudioInfos) bool {
 	isValid := true
-	if expectations.IsCBR != audioInfo.IsCBR {
-		log.Error("IsCBR not equal:", expectations.IsCBR, "!=", audioInfo.IsCBR)
-		isValid = false
+	if expectations.IsCBR {
+		if expectations.IsCBR != audioInfo.IsCBR {
+			log.Error("IsCBR not equal:", expectations.IsCBR, "!=", audioInfo.IsCBR)
+			isValid = false
+		}
 	}
-
-	log.Info("Validation success")
 
 	return isValid
 }
@@ -90,8 +97,6 @@ func IsValidEncoding(expectations Expectations, encoding Encoding) bool {
 		log.Error("IsStereo not equal:", expectations.Encoding.IsStereo, "!=", encoding.IsStereo)
 		isValid = false
 	}
-
-	log.Info("Validation success")
 
 	return isValid
 }

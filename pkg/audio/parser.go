@@ -14,11 +14,12 @@ var (
 	fullDataSize uint64 = 0
 	currentData  []byte
 	// tag
-	skippedTag      bool  = false
-	tagSize         int64 = 0
+	skippedTag bool = false
+	// tagSize         int64 = 0
 	currentTagIndex int64 = 0
 	tagEnd          int64 = 0
 	// audio
+	audioInfo              AudioInfos
 	foundFirstFrame        bool      = false
 	skippedUntilFirstFrame uint64    = 0
 	unitsTotal             uint64    = 0
@@ -62,27 +63,27 @@ func GetAudioType(data []byte) AudioType {
 
 // parse
 
-func Parse(data []byte, filepath string, verbose bool) *AudioInfos {
+func Parse(data []byte, filepath string, verbose bool, printLogs bool) *AudioInfos {
 	// skip tag
-	tagSize = metadata.GetTagSize(data)
-	if tagSize < 0 {
+	audioInfo.TagSize = metadata.GetTagSize(data)
+	if audioInfo.TagSize < 0 {
 		fmt.Println("Error: Tag size could not be evaluated.")
-		tagSize = 0
-	} else if tagSize > 0 {
-		fmt.Println("Tag size:", tagSize)
+		audioInfo.TagSize = 0
+	} else if audioInfo.TagSize > 0 {
+		fmt.Println("Tag size:", audioInfo.TagSize)
 	}
 
 	// parse audio
 	var audioStart int64 = 0
-	if tagSize > 0 {
-		audioStart = tagSize - 1
+	if audioInfo.TagSize > 0 {
+		audioStart = audioInfo.TagSize - 1
 	}
 	audioTypeGuessed := GuessAudioType(filepath)
 	firstFrameIndex := GetFirstFrameIndex(data, uint64(audioStart), audioTypeGuessed)
 	if firstFrameIndex < 0 {
 		return nil
 	}
-	skippedUntilFirstFrame = uint64(firstFrameIndex - tagSize)
+	skippedUntilFirstFrame = uint64(firstFrameIndex - audioInfo.TagSize)
 	foundFirstFrame = firstFrameIndex > audioStart
 
 	// get audio
@@ -92,7 +93,6 @@ func Parse(data []byte, filepath string, verbose bool) *AudioInfos {
 		return nil
 	}
 
-	var audioInfo AudioInfos
 	if audioType == AudioTypeMp3 {
 		audioInfo = ParseMp3(data[firstFrameIndex:], verbose)
 
@@ -101,55 +101,58 @@ func Parse(data []byte, filepath string, verbose bool) *AudioInfos {
 	}
 
 	fmt.Println()
-	audioInfo.TagSize = tagSize
-	audioInfo.FirstFrameIndex = tagSize + int64(skippedUntilFirstFrame)
-	audioInfo.Print()
+	audioInfo.FirstFrameIndex = audioInfo.TagSize + int64(skippedUntilFirstFrame)
+	if printLogs {
+		audioInfo.Print()
+	}
 
 	unitsTotal = uint64(len(audioInfo.Units))
 	bytesTotal = audioInfo.Units[unitsTotal-1].Index + uint64(audioInfo.Units[unitsTotal-1].Size)
 
 	// log
 	fullDataSize = uint64(len(data))
-	LogResult(filepath)
+	if printLogs {
+		LogResult(filepath)
+	}
 
 	return &audioInfo
 }
 
-func ParseBlockwise(data []byte, audioTypeGuessed AudioType, verbose bool) error {
+func ParseBlockwise(data []byte, audioTypeGuessed AudioType, verbose bool, printLogs bool) (*AudioInfos, error) {
 	fullDataSize += uint64(len(data))
 	currentData = append(currentData, data...)
 	dataSize := len(currentData)
 	var offset int64 = 0
 
 	// skip tag
-	if !skippedTag && currentTagIndex <= tagSize {
-		if tagSize == 0 {
-			tagSize = metadata.GetTagSize(currentData)
-			if tagSize < 0 {
+	if !skippedTag && currentTagIndex <= audioInfo.TagSize {
+		if audioInfo.TagSize == 0 {
+			audioInfo.TagSize = metadata.GetTagSize(currentData)
+			if audioInfo.TagSize < 0 {
 				fmt.Println("Error: Tag size could not be evaluated.")
-				tagSize = 0
-			} else if tagSize > 0 {
-				fmt.Println("Tag size:", tagSize)
+				audioInfo.TagSize = 0
+			} else if audioInfo.TagSize > 0 {
+				fmt.Println("Tag size:", audioInfo.TagSize)
 			}
 		}
 
 		// skip tag
-		if tagSize-currentTagIndex < int64(dataSize) {
-			tagEnd = tagSize - currentTagIndex
-			currentTagIndex = tagSize - 1
+		if audioInfo.TagSize-currentTagIndex < int64(dataSize) {
+			tagEnd = audioInfo.TagSize - currentTagIndex
+			currentTagIndex = audioInfo.TagSize - 1
 			skippedTag = true
 			fmt.Println("Skipped tag at index:", currentTagIndex)
 		} else {
 			currentTagIndex += int64(dataSize)
 			currentData = currentData[:0]
-			return nil
+			return nil, nil
 		}
 	}
 
 	// get audio offset
 	offset = GetFirstFrameIndex(currentData, uint64(tagEnd), audioTypeGuessed)
 	if offset < 0 {
-		return nil
+		return nil, nil
 	}
 
 	if !foundFirstFrame {
@@ -157,7 +160,7 @@ func ParseBlockwise(data []byte, audioTypeGuessed AudioType, verbose bool) error
 		audioType = GetAudioType(currentData[offset:])
 		if audioType == AudioTypeUnknown {
 			fmt.Println("Unknown audio type.")
-			return nil
+			return nil, nil
 		}
 		foundFirstFrame = offset >= tagEnd
 		skippedUntilFirstFrame = uint64(offset - tagEnd)
@@ -165,17 +168,17 @@ func ParseBlockwise(data []byte, audioTypeGuessed AudioType, verbose bool) error
 	}
 
 	// parse audio
-	var audioInfo AudioInfos
+	var audioInfoBlock AudioInfos
 	if audioType == AudioTypeMp3 {
-		audioInfo = ParseMp3(currentData[offset:], verbose)
+		audioInfoBlock = ParseMp3(currentData[offset:], verbose)
 	} else if audioType == AudioTypeAAC {
 		fmt.Println("Not jet implemented!")
 	}
 
 	// remove handled data from
-	units := len(audioInfo.Units)
+	units := len(audioInfoBlock.Units)
 	if units > 0 {
-		i := audioInfo.Units[units-1].Index + uint64(audioInfo.Units[units-1].Size) + uint64(offset)
+		i := audioInfoBlock.Units[units-1].Index + uint64(audioInfoBlock.Units[units-1].Size) + uint64(offset)
 		bytesTotal += i
 		unitsTotal += uint64(units)
 		currentData = currentData[i:]
@@ -183,12 +186,12 @@ func ParseBlockwise(data []byte, audioTypeGuessed AudioType, verbose bool) error
 
 	// log infos
 	fmt.Println()
-	audioInfo.TagSize = tagSize
-	audioInfo.Print()
+	if printLogs {
+		audioInfo.Print()
+		LogResult("")
+	}
 
-	LogResult("")
-
-	return nil
+	return &audioInfo, nil
 }
 
 func LogResult(filepath string) {
@@ -199,9 +202,9 @@ func LogResult(filepath string) {
 		fmt.Println("File path:", filepath)
 	}
 	fmt.Println("File size:", fullDataSize)
-	fmt.Println("Tag size:", tagSize)
+	fmt.Println("Tag size:", audioInfo.TagSize)
 	fmt.Println("Skipped bytes to first frame:", skippedUntilFirstFrame)
-	fmt.Println("Audio size:", fullDataSize-skippedUntilFirstFrame-uint64(tagSize))
+	fmt.Println("Audio size:", fullDataSize-skippedUntilFirstFrame-uint64(audioInfo.TagSize))
 	fmt.Println("Audio frames:", unitsTotal)
 	fmt.Println("Bytes frames:", bytesTotal)
 }

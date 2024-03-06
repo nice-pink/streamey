@@ -10,7 +10,7 @@ import (
 
 func Clean(folder string, sec int64, ignoreHiddenFiles bool, delete bool) {
 	// get files
-	files := filesystem.ListFiles(folder, sec, true)
+	files := filesystem.ListFiles(folder, sec, ignoreHiddenFiles)
 
 	// logs
 	ago := -time.Duration(sec) * time.Second

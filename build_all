@@ -1,29 +1,12 @@
 #!/bin/bash
 
-rm -rf bin
-mkdir -p bin
+mkdir -p bin/
 
-# build streamey
-cd cmd/streamey
-go build -o ../../bin
-cd ../..
-
-# build readey
-cd cmd/readey
-go build -o ../../bin
-cd ../..
-
-# build cleaney
-cd cmd/cleaney
-go build -o ../../bin
-cd ../..
-
-# build mp3
-cd cmd/mp3
-go build -o ../../bin
-cd ../..
-
-# build manipuley
-cd cmd/manipuley
-go build -o ../../bin
-cd ../..
+for d in cmd/*/ ; do
+    [ -L "${d%/}" ] && continue
+    echo "build $d"
+    cd $d
+    go build -o ../../bin
+    cd ../..
+    echo "done!"
+done

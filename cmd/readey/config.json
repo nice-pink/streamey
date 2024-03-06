@@ -1,0 +1,9 @@
+{
+    "Expectations": {
+        "Codec": "mp3",
+        "CBR": true,
+        "FrameSize": 1044,
+        "SampleRate": 44100,
+        "Stereo": true
+    }
+}

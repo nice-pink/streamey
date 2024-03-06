@@ -1,4 +1,4 @@
-package cleaney
+package util
 
 import (
 	"strconv"
@@ -8,7 +8,7 @@ import (
 	"github.com/nice-pink/goutil/pkg/log"
 )
 
-func Clean(folder string, sec int64, ignoreHiddenFiles bool, delete bool) {
+func CleanUp(folder string, sec int64, ignoreHiddenFiles bool, delete bool) {
 	// get files
 	files := filesystem.ListFiles(folder, sec, ignoreHiddenFiles)
 

@@ -2,7 +2,6 @@ package audio
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -19,6 +18,8 @@ var (
 	currentTagIndex int64 = 0
 	tagEnd          int64 = 0
 	// audio
+	encoding               Encoding
+	foundEncoding          bool
 	audioInfo              AudioInfos
 	foundFirstFrame        bool      = false
 	skippedUntilFirstFrame uint64    = 0
@@ -61,9 +62,17 @@ func GetAudioType(data []byte) AudioType {
 	return AudioTypeUnknown
 }
 
+func GetAudioTypeFromCodecName(name string) AudioType {
+	// get audio type
+	if strings.ToUpper(name) == "MP3" {
+		return AudioTypeMp3
+	}
+	return AudioTypeUnknown
+}
+
 // parse
 
-func Parse(data []byte, filepath string, verbose bool, printLogs bool) *AudioInfos {
+func Parse(data []byte, filepath string, includeUnitEncoding bool, verbose bool, printLogs bool) *AudioInfos {
 	// skip tag
 	audioInfo.TagSize = metadata.GetTagSize(data)
 	if audioInfo.TagSize < 0 {
@@ -94,7 +103,8 @@ func Parse(data []byte, filepath string, verbose bool, printLogs bool) *AudioInf
 	}
 
 	if audioType == AudioTypeMp3 {
-		audioInfo = ParseMp3(data[firstFrameIndex:], verbose)
+		encoding = GetEncodingFromFirstMpegHeader(data, uint64(firstFrameIndex))
+		audioInfo = ParseMp3(data[firstFrameIndex:], encoding, includeUnitEncoding, verbose)
 
 	} else if audioType == AudioTypeAAC {
 		fmt.Println("Not jet implemented!")
@@ -118,7 +128,7 @@ func Parse(data []byte, filepath string, verbose bool, printLogs bool) *AudioInf
 	return &audioInfo
 }
 
-func ParseBlockwise(data []byte, audioTypeGuessed AudioType, verbose bool, printLogs bool) (*AudioInfos, error) {
+func ParseBlockwise(data []byte, audioTypeGuessed AudioType, includeUnitEncoding bool, verbose bool, printLogs bool) (*AudioInfos, error) {
 	fullDataSize += uint64(len(data))
 	currentData = append(currentData, data...)
 	dataSize := len(currentData)
@@ -170,7 +180,11 @@ func ParseBlockwise(data []byte, audioTypeGuessed AudioType, verbose bool, print
 	// parse audio
 	var audioInfoBlock AudioInfos
 	if audioType == AudioTypeMp3 {
-		audioInfoBlock = ParseMp3(currentData[offset:], verbose)
+		if !foundEncoding {
+			encoding = GetEncodingFromFirstMpegHeader(currentData, uint64(offset))
+			foundEncoding = true
+		}
+		audioInfoBlock = ParseMp3(currentData[offset:], encoding, includeUnitEncoding, verbose)
 	} else if audioType == AudioTypeAAC {
 		fmt.Println("Not jet implemented!")
 	}
@@ -191,7 +205,7 @@ func ParseBlockwise(data []byte, audioTypeGuessed AudioType, verbose bool, print
 		LogParserResult("")
 	}
 
-	return &audioInfo, nil
+	return &audioInfoBlock, nil
 }
 
 func PrintAudioInfo() {
@@ -219,16 +233,27 @@ func MakeFirstFramePrivate(data []byte, offset uint64, audioType AudioType) {
 	}
 }
 
-func ParseMp3(data []byte, verbose bool) AudioInfos {
+// mpeg
+
+func GetEncodingFromFirstMpegHeader(data []byte, offset uint64) Encoding {
 	// get frame infos
+	fmt.Println()
+	fmt.Println("*************")
+	fmt.Println("Inital header")
+	fmt.Println("use encoding!")
 	header := GetMpegHeader(data)
-	if !header.IsValid() {
+	if !header.IsValid(true) {
 		fmt.Println("Error: Header is not valid")
 		header.Print(false)
-		os.Exit(2)
-	}
 
-	encoding := GetMp3Encoding(header)
-	audioInfo := GetAudioInfosMpeg(data, 0, encoding, true, verbose)
+	}
+	header.Print(true)
+	fmt.Println("*************")
+	fmt.Println()
+	return GetMpegEncoding(header)
+}
+
+func ParseMp3(data []byte, encoding Encoding, includeUnitEncoding bool, verbose bool) AudioInfos {
+	audioInfo := GetAudioInfosMpeg(data, 0, encoding, includeUnitEncoding, true, verbose)
 	return audioInfo
 }

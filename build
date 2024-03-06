@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo "build cmd/$1"
+cd cmd/$1
+go build -o ../../bin
+cd ../..
+echo "done!"

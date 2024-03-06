@@ -7,16 +7,10 @@ import (
 	"sync"
 
 	"github.com/nice-pink/goutil/pkg/log"
-	"github.com/nice-pink/streamey/pkg/streamey"
+	"github.com/nice-pink/streamey/pkg/network"
 )
 
 var wg sync.WaitGroup
-
-const (
-	delay       int64  = 3600
-	bucket      string = "data"
-	minioFolder string = "audio"
-)
 
 func main() {
 	log.Info("--- Start streamey ---")
@@ -42,24 +36,27 @@ func main() {
 
 	goRoutineCounter := 0
 
+	streamUrl := *url
 	if *test {
 		goRoutineCounter++
 		go Receive()
+		// overwrite url
+		streamUrl = "localhost:9999"
 	}
 
 	goRoutineCounter++
-	go Stream(*url, float64(*bitrate), data, *reconnect)
+	go Stream(streamUrl, float64(*bitrate), data, *reconnect)
 
 	wg.Add(goRoutineCounter)
 	wg.Wait()
 }
 
 func Stream(url string, bitrate float64, data []byte, reconnect bool) {
-	streamey.Stream(url, bitrate, data, reconnect)
+	network.StreamBuffer(url, bitrate, data, reconnect)
 	wg.Done()
 }
 
 func Receive() {
-	streamey.ReadTest(9999, true)
+	network.ReadTest(9999, true)
 	wg.Done()
 }

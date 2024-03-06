@@ -133,18 +133,18 @@ func (h MpegHeader) Print(extended bool) {
 
 //
 
-func GetMp3Encoding(header MpegHeader) Encoding {
+func GetMpegEncoding(header MpegHeader) Encoding {
 	return Encoding{
 		ContainerName: "mp3",
 		CodecName:     "mp3",
 		Bitrate:       header.Bitrate,
 		SampleRate:    header.SampleRate,
 		FrameSize:     GetMpegFrameSizeSamples(),
-		Stereo:        header.ChannelMode < 3,
+		IsStereo:      header.ChannelMode < 3,
 	}
 }
 
-func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, printHeaders bool, verbose bool) AudioInfos {
+func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, includeUnitEncoding bool, printHeaders bool, verbose bool) AudioInfos {
 	audioInfos := AudioInfos{Encoding: encoding, Units: []UnitInfo{}, IsCBR: true, IsSampleRateConstant: true}
 	dataSize := len(data)
 
@@ -188,7 +188,11 @@ func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, printHeade
 		}
 
 		// append unit
-		audioInfos.Units = append(audioInfos.Units, UnitInfo{Index: index, Size: frameSize})
+		unitInfo := UnitInfo{Index: index, Size: frameSize}
+		if includeUnitEncoding {
+			unitInfo.Encoding = GetMpegEncoding(header)
+		}
+		audioInfos.Units = append(audioInfos.Units, unitInfo)
 		index += uint64(frameSize)
 	}
 
@@ -250,17 +254,29 @@ func GetNextFrameIndexMpeg(data []byte, offset uint64) int64 {
 
 //
 
-func (header MpegHeader) IsValid() bool {
+func (header MpegHeader) IsValid(verbose bool) bool {
 	if header.MpegVersion == MpegVersionReserved {
+		if verbose {
+			fmt.Println("Invalid version")
+		}
 		return false
 	}
 	if header.Layer == MpegLayerReserved {
+		if verbose {
+			fmt.Println("Invalid layer")
+		}
 		return false
 	}
 	if header.SampleRate == -1 {
+		if verbose {
+			fmt.Println("Invalid sample rate")
+		}
 		return false
 	}
 	if header.Bitrate == -1 {
+		if verbose {
+			fmt.Println("Invalid bitrate")
+		}
 		return false
 	}
 

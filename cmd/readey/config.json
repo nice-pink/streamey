@@ -5,7 +5,7 @@
             "FrameSize": 1044,
             "SampleRate": 44100,
             "Bitrate": 192000,
-            "Stereo": true
+            "IsStereo": true
         },
         "CBR": true
     }

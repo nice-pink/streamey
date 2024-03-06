@@ -1,4 +1,4 @@
-package streamey
+package network
 
 import (
 	"net"
@@ -7,7 +7,7 @@ import (
 	"github.com/nice-pink/goutil/pkg/log"
 )
 
-func Stream(address string, sendBitRate float64, buffer []byte, reconnect bool) {
+func StreamBuffer(address string, sendBitRate float64, buffer []byte, reconnect bool) {
 	for {
 
 		// connection

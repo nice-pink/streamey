@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/nice-pink/goutil/pkg/log"
-	"github.com/nice-pink/streamey/pkg/cleaney"
+	"github.com/nice-pink/streamey/pkg/util"
 )
 
 func main() {
@@ -22,5 +22,5 @@ func main() {
 		os.Exit(2)
 	}
 
-	cleaney.Clean(*folder, *sec, true, *delete)
+	util.CleanUp(*folder, *sec, true, *delete)
 }

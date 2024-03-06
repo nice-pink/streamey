@@ -4,13 +4,15 @@ import (
 	"encoding/json"
 	"flag"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/nice-pink/goutil/pkg/filesystem"
 	"github.com/nice-pink/goutil/pkg/log"
+	"github.com/nice-pink/streamey/pkg/audio"
 	"github.com/nice-pink/streamey/pkg/miniomanager"
-	"github.com/nice-pink/streamey/pkg/readey"
+	"github.com/nice-pink/streamey/pkg/network"
 )
 
 var wg sync.WaitGroup
@@ -27,15 +29,18 @@ func main() {
 
 	// flags
 	url := flag.String("url", "", "Stream url")
-	maxBytes := flag.Int64("maxBytes", -1, "[Optional] Max bytes to read from url.")
+	maxBytes := flag.Uint64("maxBytes", 0, "[Optional] Max bytes to read from url.")
+	timeout := flag.Int("timeout", 30, "Timeout. Default: 30sec")
+	validate := flag.String("validate", "", "Validation type. [audio]")
 	outputFilepath := flag.String("outputFilepath", "", "[Optional] Output file path, if data should be dumped to file.")
 	reconnect := flag.Bool("reconnect", false, "[Optional] Reconnect on any interruption.")
 	minioConfig := flag.String("minioConfig", "", "[Optional] Json config file for minio. Use minio if defined.")
 	minioCleanUpAfterSec := flag.Int64("minioCleanUpAfterSec", 0, "[Optional] Cleanup minio bucket after seconds.")
+	verbose := flag.Bool("verbose", false, "Verbose Logging.")
 	flag.Parse()
 
 	// read stream
-	go ReadStream(*url, *maxBytes, *outputFilepath, *reconnect)
+	go ReadStream(*url, *maxBytes, *outputFilepath, *reconnect, *timeout, *validate, *verbose)
 
 	// start minio sync
 	goRoutineCounter := 1
@@ -52,8 +57,24 @@ func main() {
 
 // stream
 
-func ReadStream(url string, maxBytes int64, outputFilepath string, reconnect bool) {
-	readey.ReadStream(url, maxBytes, outputFilepath, reconnect)
+func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout int, validate string, verbose bool) {
+	var validator audio.Validator
+	if strings.ToLower(validate) == "audio" {
+		log.Info()
+		log.Info("### Audio validation")
+		expectations := audio.Expectations{
+			IsCBR: true,
+			Encoding: audio.Encoding{
+				Bitrate:  192,
+				IsStereo: true,
+			},
+		}
+		expectations.Print()
+		log.Info("###")
+		log.Info()
+		validator = *audio.NewValidator(expectations)
+	}
+	network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator, verbose)
 	wg.Done()
 }
 

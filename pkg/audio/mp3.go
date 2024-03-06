@@ -38,8 +38,8 @@ const (
 )
 
 const (
-	HeaderSize int    = 4
-	SyncTag    string = "FFE0"
+	MpegHeaderSize int    = 4
+	MpegSyncTag    string = "FFE0"
 )
 
 // header
@@ -113,7 +113,7 @@ func GetMpegHeader(data []byte) MpegHeader {
 }
 
 func StartsWithMpegSync(data []byte) bool {
-	return util.BytesEqualHexWithMask(SyncTag, SyncTag, data)
+	return util.BytesEqualHexWithMask(MpegSyncTag, MpegSyncTag, data)
 }
 
 func (h MpegHeader) Print(extended bool) {
@@ -151,7 +151,7 @@ func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, includeUni
 	var index uint64 = offset
 	for {
 		// exit?
-		if index+uint64(HeaderSize) > uint64(dataSize) {
+		if index+uint64(MpegHeaderSize) > uint64(dataSize) {
 			break
 		}
 
@@ -188,7 +188,7 @@ func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, includeUni
 		}
 
 		// append unit
-		unitInfo := UnitInfo{Index: index, Size: frameSize}
+		unitInfo := UnitInfo{Index: index, Size: frameSize, IsPrivate: header.Private}
 		if includeUnitEncoding {
 			unitInfo.Encoding = GetMpegEncoding(header)
 		}
@@ -229,7 +229,7 @@ func GetNextFrameIndexMpeg(data []byte, offset uint64) int64 {
 	var index int64 = int64(offset)
 	for {
 		// exit?
-		if index+int64(HeaderSize) > int64(dataSize) {
+		if index+int64(MpegHeaderSize) > int64(dataSize) {
 			break
 		}
 

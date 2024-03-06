@@ -4,9 +4,11 @@ import (
 	"flag"
 	"io"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/nice-pink/goutil/pkg/log"
+	"github.com/nice-pink/streamey/pkg/audio"
 	"github.com/nice-pink/streamey/pkg/network"
 )
 
@@ -22,6 +24,8 @@ func main() {
 	reconnect := flag.Bool("reconnect", false, "[Optional] Reconnect on any interruption.")
 	bitrate := flag.Int64("bitrate", 0, "Send bitrate.")
 	test := flag.Bool("test", false, "Test sending with internal reader.")
+	verbose := flag.Bool("verbose", false, "Verbose logging.")
+	validateTest := flag.String("validateTest", "", "Validation test.")
 	flag.Parse()
 
 	// read file
@@ -39,7 +43,7 @@ func main() {
 	streamUrl := *url
 	if *test {
 		goRoutineCounter++
-		go Receive()
+		go Receive(*validateTest, *verbose)
 		// overwrite url
 		streamUrl = "localhost:9999"
 	}
@@ -56,7 +60,29 @@ func Stream(url string, bitrate float64, data []byte, reconnect bool) {
 	wg.Done()
 }
 
-func Receive() {
-	network.ReadTest(9999, true)
+func Receive(validate string, verbose bool) {
+	if strings.ToLower(validate) == "audio" {
+		log.Info()
+		log.Info("### Audio validation")
+		expectations := audio.Expectations{
+			IsCBR: true,
+			Encoding: audio.Encoding{
+				Bitrate:  256,
+				IsStereo: true,
+			},
+		}
+		expectations.Print()
+		log.Info("###")
+		log.Info()
+		validator := audio.NewEncodingValidator(true, expectations, verbose)
+		network.ReadTest(9999, true, validator)
+	} else if strings.ToLower(validate) == "privatebit" {
+		log.Info("PrivateBit validation.")
+		validator := audio.NewPrivateBitValidator(true, verbose, audio.AudioTypeMp3)
+		network.ReadTest(9999, true, validator)
+	} else {
+		validator := network.DummyValidator{}
+		network.ReadTest(9999, true, validator)
+	}
 	wg.Done()
 }

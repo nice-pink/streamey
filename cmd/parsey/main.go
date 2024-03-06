@@ -33,15 +33,18 @@ func main() {
 	}
 
 	if *block {
+		guessedAudioType := audio.GuessAudioType(*filepath)
 		// parse continuously
-		Blockwise(data, *verbose)
+		Blockwise(data, guessedAudioType, *verbose)
 	} else {
 		// parse audio
-		audio.Parse(data, *filepath, false, *verbose, true)
+		parser := audio.NewParser()
+		parser.Parse(data, *filepath, false, *verbose, true)
 	}
 }
 
-func Blockwise(data []byte, verbose bool) {
+func Blockwise(data []byte, guessedAudioType audio.AudioType, verbose bool) {
+	parser := audio.NewParser()
 	dataSize := len(data)
 	index := 0
 	for {
@@ -49,12 +52,12 @@ func Blockwise(data []byte, verbose bool) {
 			break
 		}
 		iMax := min(index+1024, dataSize)
-		audio.ParseBlockwise(data[index:iMax], audio.AudioTypeMp3, false, verbose, false)
+		parser.ParseBlockwise(data[index:iMax], guessedAudioType, false, verbose, false)
 
 		index = iMax
 	}
 
 	println()
-	audio.PrintAudioInfo()
-	audio.LogParserResult("")
+	parser.PrintAudioInfo()
+	parser.LogParserResult("")
 }

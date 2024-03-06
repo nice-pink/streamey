@@ -6,24 +6,27 @@ import (
 	"github.com/nice-pink/goutil/pkg/log"
 )
 
-type Validator struct {
+// encoding validator
+
+type EncodingValidator struct {
 	expectations Expectations
 	verbose      bool
 	active       bool
+	parser       *Parser
 }
 
-func NewValidator(active bool, expectations Expectations, verbose bool) *Validator {
-	return &Validator{expectations: expectations, verbose: verbose, active: active}
+func NewEncodingValidator(active bool, expectations Expectations, verbose bool) *EncodingValidator {
+	return &EncodingValidator{expectations: expectations, verbose: verbose, active: active, parser: NewParser()}
 }
 
-func (v Validator) Validate(data []byte, failEarly bool) error {
+func (v *EncodingValidator) Validate(data []byte, failEarly bool) error {
 	// bypass?
 	if !v.active {
 		return nil
 	}
 
 	// validate
-	blockAudioInfo, err := ParseBlockwise(data, GetAudioTypeFromCodecName(v.expectations.Encoding.CodecName), true, v.verbose, false)
+	blockAudioInfo, err := v.parser.ParseBlockwise(data, GetAudioTypeFromCodecName(v.expectations.Encoding.CodecName), true, v.verbose, false)
 	if err != nil {
 		log.Err(err, "Parsing error.")
 		return err
@@ -50,6 +53,68 @@ func (v Validator) Validate(data []byte, failEarly bool) error {
 
 	return nil
 }
+
+// encoding validator
+
+type PrivateBitValidator struct {
+	verbose           bool
+	active            bool
+	audioType         AudioType
+	lastFrameDistance uint64
+	currentFrameCount uint64
+	parser            *Parser
+}
+
+func NewPrivateBitValidator(active bool, verbose bool, audioType AudioType) *PrivateBitValidator {
+	return &PrivateBitValidator{verbose: verbose, active: active, audioType: audioType, parser: NewParser()}
+}
+
+func (v *PrivateBitValidator) Validate(data []byte, failEarly bool) error {
+	// bypass?
+	if !v.active {
+		return nil
+	}
+
+	// validate
+	blockAudioInfo, err := v.parser.ParseBlockwise(data, v.audioType, true, v.verbose, false)
+	if err != nil {
+		log.Err(err, "Parsing error.")
+		return err
+	}
+
+	if blockAudioInfo == nil {
+		// log.Error("No block audio data.")
+		return nil
+	}
+
+	// validate encodings
+	for i, unit := range blockAudioInfo.Units {
+		if !unit.IsPrivate {
+			v.currentFrameCount++
+			continue
+		} else {
+			log.Info("Found private bit.")
+		}
+
+		// validate distance
+		if v.lastFrameDistance > 0 {
+			if v.currentFrameCount != v.lastFrameDistance {
+				log.Error("Distances not equal. Current:", v.currentFrameCount, "!= Last:", v.lastFrameDistance, i, len(blockAudioInfo.Units))
+				return errors.New("distance not equal")
+			} else {
+				log.Info("Distance between private bits:", v.lastFrameDistance)
+			}
+		}
+
+		// reset
+		v.lastFrameDistance = v.currentFrameCount
+		v.currentFrameCount = 0
+	}
+
+	return nil
+}
+
+// general valiation
 
 func IsValid(expectations Expectations, audioInfo AudioInfos) bool {
 	isValid := true

@@ -16,6 +16,13 @@ type Validator interface {
 	Validate(data []byte, failEarly bool) error
 }
 
+type DummyValidator struct {
+}
+
+func (v DummyValidator) Validate(data []byte, failEarly bool) error {
+	return nil
+}
+
 // read stream
 
 func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout time.Duration, dataValidator Validator) {
@@ -99,6 +106,7 @@ func ReadLineByLine(url string, dumpToFile string, timeout time.Duration, maxByt
 		if writeToFile {
 			file.Write(line)
 		}
+		bytesRead += uint64(len(line))
 
 		// validate
 		validationErr := dataValidator.Validate(line, true)
@@ -106,8 +114,7 @@ func ReadLineByLine(url string, dumpToFile string, timeout time.Duration, maxByt
 			return validationErr
 		}
 
-		bytesRead += uint64(len(line))
-
+		// exit?
 		if maxBytes > 0 && bytesRead > uint64(maxBytes) {
 			log.Info()
 			log.Info("Stop: Max bytes read", bytesRead)
@@ -131,7 +138,7 @@ func getFilePath(baseFilePath string, iteration int, addTimestamp bool) string {
 
 // quick read test
 
-func ReadTest(port int, printRate bool) {
+func ReadTest(port int, printRate bool, dataValidator Validator) {
 	listener, err := net.Listen("tcp", "localhost:"+strconv.Itoa(port))
 	if err != nil {
 		log.Err(err, "Listen error.")
@@ -150,11 +157,11 @@ func ReadTest(port int, printRate bool) {
 		}
 
 		// Handle client connection in a goroutine
-		go handleClient(conn)
+		go handleClient(conn, dataValidator)
 	}
 }
 
-func handleClient(conn net.Conn) {
+func handleClient(conn net.Conn, dataValidator Validator) {
 	defer conn.Close()
 
 	var readTotal int64 = 0
@@ -171,6 +178,9 @@ func handleClient(conn net.Conn) {
 			return
 		}
 		readTotal += int64(n)
+
+		// validate
+		dataValidator.Validate(buffer, true)
 
 		// Process and use the data (here, we'll just print it)
 		if count > 20 {

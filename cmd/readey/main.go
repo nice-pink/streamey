@@ -31,7 +31,7 @@ func main() {
 	url := flag.String("url", "", "Stream url")
 	maxBytes := flag.Uint64("maxBytes", 0, "[Optional] Max bytes to read from url.")
 	timeout := flag.Int("timeout", 30, "Timeout. Default: 30sec")
-	validate := flag.String("validate", "", "Validation type. [audio]")
+	validate := flag.String("validate", "", "Validation type. [audio, privateBit]")
 	outputFilepath := flag.String("outputFilepath", "", "[Optional] Output file path, if data should be dumped to file.")
 	reconnect := flag.Bool("reconnect", false, "[Optional] Reconnect on any interruption.")
 	minioConfig := flag.String("minioConfig", "", "[Optional] Json config file for minio. Use minio if defined.")
@@ -58,7 +58,6 @@ func main() {
 // stream
 
 func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout int, validate string, verbose bool) {
-	var validator audio.Validator
 	if strings.ToLower(validate) == "audio" {
 		log.Info()
 		log.Info("### Audio validation")
@@ -72,9 +71,15 @@ func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bo
 		expectations.Print()
 		log.Info("###")
 		log.Info()
-		validator = *audio.NewValidator(false, expectations, verbose)
+		validator := audio.NewEncodingValidator(true, expectations, verbose)
+		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator)
+	} else if strings.ToLower(validate) == "privatebit" {
+		validator := audio.NewPrivateBitValidator(true, verbose, audio.GuessAudioType(url))
+		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator)
+	} else {
+		validator := network.DummyValidator{}
+		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator)
 	}
-	network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator)
 	wg.Done()
 }
 

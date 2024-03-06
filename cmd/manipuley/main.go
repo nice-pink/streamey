@@ -34,7 +34,8 @@ func main() {
 	}
 
 	// parse audio
-	audioInfo := audio.Parse(data, *input, false, *verbose, true)
+	parser := audio.NewParser()
+	audioInfo := parser.Parse(data, *input, false, *verbose, true)
 	if audioInfo == nil {
 		log.Error("No audio infos!")
 	}

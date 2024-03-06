@@ -44,9 +44,10 @@ func (e Encoding) Print() {
 // unit infos
 
 type UnitInfo struct {
-	Index    uint64
-	Size     int
-	Encoding Encoding
+	Index     uint64
+	Size      int
+	IsPrivate bool
+	Encoding  Encoding
 }
 
 type AudioInfos struct {

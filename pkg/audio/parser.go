@@ -103,7 +103,7 @@ func Parse(data []byte, filepath string, verbose bool, printLogs bool) *AudioInf
 	fmt.Println()
 	audioInfo.FirstFrameIndex = audioInfo.TagSize + int64(skippedUntilFirstFrame)
 	if printLogs {
-		audioInfo.Print()
+		PrintAudioInfo()
 	}
 
 	unitsTotal = uint64(len(audioInfo.Units))
@@ -112,7 +112,7 @@ func Parse(data []byte, filepath string, verbose bool, printLogs bool) *AudioInf
 	// log
 	fullDataSize = uint64(len(data))
 	if printLogs {
-		LogResult(filepath)
+		LogParserResult(filepath)
 	}
 
 	return &audioInfo
@@ -185,16 +185,20 @@ func ParseBlockwise(data []byte, audioTypeGuessed AudioType, verbose bool, print
 	}
 
 	// log infos
-	fmt.Println()
 	if printLogs {
-		audioInfo.Print()
-		LogResult("")
+		fmt.Println()
+		PrintAudioInfo()
+		LogParserResult("")
 	}
 
 	return &audioInfo, nil
 }
 
-func LogResult(filepath string) {
+func PrintAudioInfo() {
+	audioInfo.Print()
+}
+
+func LogParserResult(filepath string) {
 	// log
 	fmt.Println()
 	fmt.Println("---")

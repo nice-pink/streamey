@@ -140,7 +140,7 @@ func GetMp3Encoding(header MpegHeader) Encoding {
 		Bitrate:       header.Bitrate,
 		SampleRate:    header.SampleRate,
 		FrameSize:     GetMpegFrameSizeSamples(),
-		IsStereo:      header.ChannelMode < 3,
+		Stereo:        header.ChannelMode < 3,
 	}
 }
 

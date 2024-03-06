@@ -22,7 +22,7 @@ type Encoding struct {
 	CodecName     string
 	SampleRate    int
 	Bitrate       int
-	IsStereo      bool
+	Stereo        bool
 	Profile       string // aac profile; could also be pcm for wav
 	FrameSize     int    // samples per frame
 }
@@ -38,7 +38,7 @@ func (e Encoding) Print() {
 	fmt.Println("Sample rate: ", strconv.Itoa(e.SampleRate))
 	fmt.Println("Bitrate: ", strconv.Itoa(e.Bitrate))
 	fmt.Println("Frame size: ", strconv.Itoa(e.FrameSize))
-	fmt.Println("Is Stereo: ", util.YesNo(e.IsStereo))
+	fmt.Println("Is Stereo: ", util.YesNo(e.Stereo))
 }
 
 // unit infos
@@ -64,4 +64,11 @@ func (a AudioInfos) Print() {
 	fmt.Println("Is sample rate constant: ", util.YesNo(a.IsSampleRateConstant))
 	fmt.Println("Unit count: ", strconv.Itoa(len(a.Units)))
 	fmt.Println("Tag size: ", a.TagSize)
+}
+
+// expectations
+
+type Expectations struct {
+	Encoding Encoding
+	CBR      bool
 }

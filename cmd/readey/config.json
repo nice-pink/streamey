@@ -1,9 +1,12 @@
 {
     "Expectations": {
-        "Codec": "mp3",
-        "CBR": true,
-        "FrameSize": 1044,
-        "SampleRate": 44100,
-        "Stereo": true
+        "Encoding": {
+            "CodecName": "mp3",
+            "FrameSize": 1044,
+            "SampleRate": 44100,
+            "Bitrate": 192000,
+            "Stereo": true
+        },
+        "CBR": true
     }
 }

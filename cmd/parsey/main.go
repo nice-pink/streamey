@@ -49,8 +49,12 @@ func Blockwise(data []byte, verbose bool) {
 			break
 		}
 		iMax := min(index+1024, dataSize)
-		audio.ParseBlockwise(data[index:iMax], audio.AudioTypeMp3, verbose, true)
+		audio.ParseBlockwise(data[index:iMax], audio.AudioTypeMp3, verbose, false)
 
 		index = iMax
 	}
+
+	println()
+	audio.PrintAudioInfo()
+	audio.LogParserResult("")
 }

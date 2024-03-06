@@ -37,7 +37,7 @@ func main() {
 		Blockwise(data, *verbose)
 	} else {
 		// parse audio
-		audio.Parse(data, *filepath, *verbose, true)
+		audio.Parse(data, *filepath, false, *verbose, true)
 	}
 }
 
@@ -49,7 +49,7 @@ func Blockwise(data []byte, verbose bool) {
 			break
 		}
 		iMax := min(index+1024, dataSize)
-		audio.ParseBlockwise(data[index:iMax], audio.AudioTypeMp3, verbose, false)
+		audio.ParseBlockwise(data[index:iMax], audio.AudioTypeMp3, false, verbose, false)
 
 		index = iMax
 	}

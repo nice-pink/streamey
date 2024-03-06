@@ -2,21 +2,21 @@ package audio
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/nice-pink/goutil/pkg/log"
 )
 
 type Validator struct {
 	expectations Expectations
+	verbose      bool
 }
 
-func NewValidator(e Expectations) *Validator {
-	return &Validator{expectations: e}
+func NewValidator(e Expectations, v bool) *Validator {
+	return &Validator{expectations: e, verbose: v}
 }
 
 func (v Validator) Validate(data []byte, failEarly bool) error {
-	blockAudioInfo, err := ParseBlockwise(data, GetAudioTypeFromCodecName(v.expectations.Encoding.CodecName), true, true, false)
+	blockAudioInfo, err := ParseBlockwise(data, GetAudioTypeFromCodecName(v.expectations.Encoding.CodecName), true, v.verbose, false)
 	if err != nil {
 		log.Err(err, "Parsing error.")
 		return err
@@ -59,28 +59,24 @@ func IsValid(expectations Expectations, audioInfo AudioInfos) bool {
 func IsValidEncoding(expectations Expectations, encoding Encoding) bool {
 	isValid := true
 	if expectations.Encoding.Bitrate > 0 {
-		fmt.Println("Check bitrate")
 		if expectations.Encoding.Bitrate != encoding.Bitrate {
 			log.Error("Bitrate not equal:", expectations.Encoding.Bitrate, "!=", encoding.Bitrate)
 			isValid = false
 		}
 	}
 	if expectations.Encoding.SampleRate > 0 {
-		fmt.Println("Check sr")
 		if expectations.Encoding.SampleRate != encoding.SampleRate {
 			log.Error("SampleRate not equal:", expectations.Encoding.SampleRate, "!=", encoding.SampleRate)
 			isValid = false
 		}
 	}
 	if expectations.Encoding.FrameSize > 0 {
-		fmt.Println("Check fs")
 		if expectations.Encoding.FrameSize != encoding.FrameSize {
 			log.Error("FrameSize not equal:", expectations.Encoding.FrameSize, "!=", encoding.FrameSize)
 			isValid = false
 		}
 	}
 	if expectations.Encoding.CodecName != "" {
-		fmt.Println("Check codec")
 		if expectations.Encoding.CodecName != encoding.CodecName {
 			log.Error("CodecName not equal:", expectations.Encoding.CodecName, "!=", encoding.CodecName)
 			isValid = false

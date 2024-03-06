@@ -18,7 +18,7 @@ type Validator interface {
 
 // read stream
 
-func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout time.Duration, dataValidator Validator, verbose bool) {
+func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout time.Duration, dataValidator Validator) {
 	// early exit
 	if url == "" {
 		log.Info()

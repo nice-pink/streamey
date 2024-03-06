@@ -31,6 +31,5 @@ LABEL org.opencontainers.image.source="https://github.com/nice-pink/streamey/blo
 WORKDIR /app
 
 # copy executable
-COPY --from=builder /app/bin/streamey /app/streamey
-COPY --from=builder /app/bin/cleaney /app/cleaney
+COPY --from=builder /app/bin/* /app/
 # ENTRYPOINT [ "/app/streamey" ]

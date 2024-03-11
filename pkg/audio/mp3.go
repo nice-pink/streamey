@@ -192,6 +192,7 @@ func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, includeUni
 		if includeUnitEncoding {
 			unitInfo.Encoding = GetMpegEncoding(header)
 		}
+		// fmt.Println(header)
 		audioInfos.Units = append(audioInfos.Units, unitInfo)
 		index += uint64(frameSize)
 	}
@@ -250,6 +251,34 @@ func GetNextFrameIndexMpeg(data []byte, offset uint64) int64 {
 		return index
 	}
 	return -1
+}
+
+func GetNextMpegHeader(data []byte, offset uint64) *MpegHeader {
+	dataSize := len(data)
+	var index int64 = int64(offset)
+	for {
+		// exit?
+		if index+int64(MpegHeaderSize) > int64(dataSize) {
+			break
+		}
+
+		// find sync header
+		if !StartsWithMpegSync(data[index:]) {
+			index++
+			continue
+		}
+
+		// get frame size
+		header := GetMpegHeader(data[index:])
+		frameSize := GetMpegFrameSize(data[index:], header, -1, 0)
+		if frameSize <= 0 {
+			index++
+			continue
+		}
+
+		return &header
+	}
+	return nil
 }
 
 //

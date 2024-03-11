@@ -23,7 +23,7 @@ func StreamBuffer(address string, sendBitRate float64, buffer []byte, reconnect 
 		var bytesWrittenTotal int64 = 0
 		streamStart := time.Now().UnixNano()
 		var byteIndex int64 = 0
-		var byteSegmentSize int64 = 1024
+		var byteSegmentSize int64 = 800
 		bufferLen := len(buffer)
 		loopCount := 0
 

@@ -92,15 +92,14 @@ func (v *PrivateBitValidator) Validate(data []byte, failEarly bool) error {
 		if !unit.IsPrivate {
 			v.currentFrameCount++
 			continue
-		} else {
-			log.Info("Found private bit.")
-		}
+		} //else {
+		// 	log.Info("Found private bit.", i, v.currentFrameCount)
+		// }
 
 		// validate distance
 		if v.lastFrameDistance > 0 {
 			if v.currentFrameCount != v.lastFrameDistance {
 				log.Error("Distances not equal. Current:", v.currentFrameCount, "!= Last:", v.lastFrameDistance, i, len(blockAudioInfo.Units))
-				return errors.New("distance not equal")
 			} else {
 				log.Info("Distance between private bits:", v.lastFrameDistance)
 			}

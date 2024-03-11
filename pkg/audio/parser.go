@@ -180,24 +180,29 @@ func (p *Parser) ParseBlockwise(data []byte, audioTypeGuessed AudioType, include
 			fmt.Println("Unknown audio type.")
 			return nil, nil
 		}
-		// if !p.foundEncoding {
-		// 	var err error
-		// 	for {
-		// 		p.encoding, err = GetEncodingFromFirstMpegHeader(data, uint64(offset))
-		// 		if err == nil {
-		// 			p.foundEncoding = true
-		// 			fmt.Println("skipped", p.skipped)
-		// 			break
-		// 		}
-		// 		offset = GetFirstFrameIndex(data, uint64(offset)+1, p.audioType)
-		// 		// fmt.Println("s first offset:", offset)
-		// 		if offset < 0 {
-		// 			p.skipped += uint64(dataSize) - uint64(offset)
-		// 			p.currentData = p.currentData[:0]
-		// 			return nil, nil
-		// 		}
-		// 	}
-		// }
+		if !p.foundEncoding {
+			header := GetNextMpegHeader(p.currentData, uint64(offset))
+			if header != nil {
+				p.encoding = GetMpegEncoding(*header)
+				p.foundEncoding = true
+			}
+			// 	var err error
+			// 	for {
+			// 		p.encoding, err = GetEncodingFromFirstMpegHeader(data, uint64(offset))
+			// 		if err == nil {
+			// 			p.foundEncoding = true
+			// 			fmt.Println("skipped", p.skipped)
+			// 			break
+			// 		}
+			// 		offset = GetFirstFrameIndex(data, uint64(offset)+1, p.audioType)
+			// 		// fmt.Println("s first offset:", offset)
+			// 		if offset < 0 {
+			// 			p.skipped += uint64(dataSize) - uint64(offset)
+			// 			p.currentData = p.currentData[:0]
+			// 			return nil, nil
+			// 		}
+			// 	}
+		}
 
 		p.foundFirstFrame = offset >= p.tagEnd
 		p.skippedUntilFirstFrame = uint64(offset - p.tagEnd)

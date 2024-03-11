@@ -1,9 +1,7 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -11,6 +9,7 @@ import (
 	"github.com/nice-pink/goutil/pkg/filesystem"
 	"github.com/nice-pink/goutil/pkg/log"
 	"github.com/nice-pink/streamey/pkg/audio"
+	"github.com/nice-pink/streamey/pkg/configmanager"
 	"github.com/nice-pink/streamey/pkg/miniomanager"
 	"github.com/nice-pink/streamey/pkg/network"
 )
@@ -36,18 +35,24 @@ func main() {
 	reconnect := flag.Bool("reconnect", false, "[Optional] Reconnect on any interruption.")
 	minioConfig := flag.String("minioConfig", "", "[Optional] Json config file for minio. Use minio if defined.")
 	minioCleanUpAfterSec := flag.Int64("minioCleanUpAfterSec", 0, "[Optional] Cleanup minio bucket after seconds.")
+	config := flag.String("config", "", "Config file.")
 	verbose := flag.Bool("verbose", false, "Verbose Logging.")
 	flag.Parse()
 
+	var c configmanager.Config
+	if *config != "" {
+		c = configmanager.Get(*config)
+	}
+
 	// read stream
-	go ReadStream(*url, *maxBytes, *outputFilepath, *reconnect, *timeout, *validate, *verbose)
+	go ReadStream(*url, *maxBytes, *outputFilepath, *reconnect, *timeout, c, *validate, *verbose)
 
 	// start minio sync
 	goRoutineCounter := 1
 	if *minioConfig != "" {
 		goRoutineCounter++
 
-		go ManageMinio(*minioConfig, delay, *outputFilepath, *minioCleanUpAfterSec, *reconnect)
+		go ManageMinio(c, delay, *outputFilepath, *minioCleanUpAfterSec, *reconnect)
 	}
 
 	// wait for go routines to be done
@@ -57,17 +62,18 @@ func main() {
 
 // stream
 
-func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout int, validate string, verbose bool) {
+func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout int, config configmanager.Config, validate string, verbose bool) {
 	if strings.ToLower(validate) == "audio" {
 		log.Info()
 		log.Info("### Audio validation")
-		expectations := audio.Expectations{
-			IsCBR: true,
-			Encoding: audio.Encoding{
-				Bitrate:  256,
-				IsStereo: true,
-			},
-		}
+		// expectations := audio.Expectations{
+		// 	IsCBR: true,
+		// 	Encoding: audio.Encoding{
+		// 		Bitrate:  256,
+		// 		IsStereo: true,
+		// 	},
+		// }
+		expectations := config.Expectations
 		expectations.Print()
 		log.Info("###")
 		log.Info()
@@ -85,23 +91,9 @@ func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bo
 
 // minio
 
-func ManageMinio(configFile string, delay int64, localFolder string, minioCleanUpAfterSec int64, loop bool) {
-	// read config
-	data, err := os.ReadFile(configFile)
-	if err != nil {
-		log.Error(err, "Minio config file does not exist.")
-		os.Exit(2)
-	}
-
-	var config miniomanager.MinioConfig
-	err = json.Unmarshal(data, &config)
-	if err != nil {
-		log.Error(err, "No valid minio config.")
-		os.Exit(2)
-	}
-
+func ManageMinio(config configmanager.Config, delay int64, localFolder string, minioCleanUpAfterSec int64, loop bool) {
 	useSsl := true
-	m := miniomanager.NewMinioManager(config, useSsl)
+	m := miniomanager.NewMinioManager(config.Minio, useSsl)
 
 	// run loop
 	duration := time.Duration(delay) * time.Second

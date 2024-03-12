@@ -9,6 +9,7 @@ import (
 
 	"github.com/nice-pink/goutil/pkg/log"
 	"github.com/nice-pink/streamey/pkg/audio"
+	"github.com/nice-pink/streamey/pkg/icecast"
 	"github.com/nice-pink/streamey/pkg/metricmanager"
 	"github.com/nice-pink/streamey/pkg/network"
 )
@@ -24,8 +25,10 @@ func main() {
 	filepath := flag.String("filepath", "", "File to stream.")
 	reconnect := flag.Bool("reconnect", false, "[Optional] Reconnect on any interruption.")
 	bitrate := flag.Int64("bitrate", 0, "Send bitrate.")
+	sr := flag.Int("sr", 44100, "Sampe rate.")
 	test := flag.Bool("test", false, "Test sending with internal reader.")
 	verbose := flag.Bool("verbose", false, "Verbose logging.")
+	isIcecast := flag.Bool("isIcecast", false, "Send icecast.")
 	validateTest := flag.String("validateTest", "", "Validation test.")
 	metrics := flag.Bool("metrics", false, "Add metrics.")
 	metricPrefix := flag.String("metricPrefix", "streamey_", "Metric prefix.")
@@ -59,14 +62,33 @@ func main() {
 	}
 
 	goRoutineCounter++
-	go Stream(streamUrl, float64(*bitrate), data, *reconnect)
+	go Stream(streamUrl, float64(*bitrate), *sr, data, *reconnect, *isIcecast)
 
 	wg.Add(goRoutineCounter)
 	wg.Wait()
 }
 
-func Stream(url string, bitrate float64, data []byte, reconnect bool) {
-	network.StreamBuffer(url, bitrate, data, reconnect)
+func Stream(url string, bitrate float64, sampleRate int, data []byte, reconnect bool, isIcecast bool) {
+	var header []byte
+	if isIcecast {
+		// header
+		meta := icecast.IcyMeta{Bitrate: int(bitrate), Channels: 2, SampleRate: sampleRate}
+		icyAdd, err := icecast.GetIcyAddress(url)
+		if err != nil {
+			log.Error("Icy address")
+			panic(err)
+		}
+		header, err = icecast.GetIcecastPutHeader(icyAdd, meta)
+		if err != nil {
+			os.Exit(2)
+		}
+		// send buffer
+		address := icyAdd.Domain + ":" + icyAdd.Port
+		network.StreamBuffer(address, bitrate, header, data, reconnect)
+	} else {
+		// send buffer as is
+		network.StreamBuffer(url, bitrate, header, data, reconnect)
+	}
 	wg.Done()
 }
 

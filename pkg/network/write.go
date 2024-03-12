@@ -9,7 +9,8 @@ import (
 	"github.com/nice-pink/streamey/pkg/metricmanager"
 )
 
-func StreamBuffer(address string, sendBitRate float64, headerBuffer []byte, buffer []byte, reconnect bool) {
+func StreamBuffer(address string, sendBitRate float64, headerBuffer []byte, buffer []byte, reconnect bool, verbose bool) {
+	log.Info("Stream data to", address, "with bitrate", sendBitRate, ". Reconnect", reconnect)
 	for {
 		// connection
 		conn, err := net.Dial("tcp", address)

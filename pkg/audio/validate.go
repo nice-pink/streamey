@@ -47,7 +47,7 @@ func (v *PrivateBitValidator) Validate(data []byte, failEarly bool) error {
 		if !unit.IsPrivate {
 			v.currentFrameCount++
 			continue
-		} else {
+		} else if v.verbose {
 			log.Info("Found private bit.", i, v.currentFrameCount)
 		}
 

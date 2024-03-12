@@ -56,7 +56,7 @@ func main() {
 	}
 
 	goRoutineCounter++
-	go Stream(streamUrl, float64(*bitrate), *sr, data, *reconnect, *isIcecast)
+	go Stream(streamUrl, float64(*bitrate), *sr, data, *reconnect, *isIcecast, *verbose)
 
 	wg.Add(goRoutineCounter)
 	wg.Wait()
@@ -81,7 +81,7 @@ func GetData(filepath string) []byte {
 	return data
 }
 
-func Stream(url string, bitrate float64, sampleRate int, data []byte, reconnect bool, isIcecast bool) {
+func Stream(url string, bitrate float64, sampleRate int, data []byte, reconnect bool, isIcecast bool, verbose bool) {
 	var header []byte
 	if isIcecast {
 		// header
@@ -97,10 +97,10 @@ func Stream(url string, bitrate float64, sampleRate int, data []byte, reconnect 
 		}
 		// send buffer
 		address := icyAdd.Domain + ":" + icyAdd.Port
-		network.StreamBuffer(address, bitrate, header, data, reconnect)
+		network.StreamBuffer(address, bitrate, header, data, reconnect, verbose)
 	} else {
 		// send buffer as is
-		network.StreamBuffer(url, bitrate, header, data, reconnect)
+		network.StreamBuffer(url, bitrate, header, data, reconnect, verbose)
 	}
 	wg.Done()
 }

@@ -40,7 +40,9 @@ func StreamBuffer(address string, sendBitRate float64, headerBuffer []byte, buff
 		var count int = 1
 		for {
 			if byteIndex >= int64(bufferLen) {
-				log.Info("Start loop", loopCount)
+				if verbose {
+					log.Info("Start loop", loopCount)
+				}
 				byteIndex = 0
 				count = 1
 				loopCount++

@@ -12,6 +12,7 @@ import (
 	"github.com/nice-pink/streamey/pkg/icecast"
 	"github.com/nice-pink/streamey/pkg/metricmanager"
 	"github.com/nice-pink/streamey/pkg/network"
+	"github.com/nice-pink/streamey/pkg/util"
 )
 
 var wg sync.WaitGroup
@@ -36,14 +37,7 @@ func main() {
 	flag.Parse()
 
 	// read file
-	file, err := os.Open(*filepath)
-	if err != nil {
-		log.Err(err, "Cannot open file.")
-	}
-	data, err := io.ReadAll(file)
-	if err != nil {
-		log.Err(err, "Cannot read file.")
-	}
+	data := GetData(*filepath)
 
 	// start metrics server
 	if *metrics {
@@ -66,6 +60,25 @@ func main() {
 
 	wg.Add(goRoutineCounter)
 	wg.Wait()
+}
+
+func GetData(filepath string) []byte {
+	filepathFinal := filepath
+	if strings.HasPrefix(filepath, "http") {
+		filepathFinal = "file.mp3"
+		util.DownloadFile(filepath, filepathFinal)
+	}
+
+	// is local file
+	file, err := os.Open(filepathFinal)
+	if err != nil {
+		log.Err(err, "Cannot open file.")
+	}
+	data, err := io.ReadAll(file)
+	if err != nil {
+		log.Err(err, "Cannot read file.")
+	}
+	return data
 }
 
 func Stream(url string, bitrate float64, sampleRate int, data []byte, reconnect bool, isIcecast bool) {

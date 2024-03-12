@@ -10,6 +10,7 @@ import (
 	"github.com/nice-pink/goutil/pkg/log"
 	"github.com/nice-pink/streamey/pkg/audio"
 	"github.com/nice-pink/streamey/pkg/configmanager"
+	"github.com/nice-pink/streamey/pkg/metricmanager"
 	"github.com/nice-pink/streamey/pkg/miniomanager"
 	"github.com/nice-pink/streamey/pkg/network"
 )
@@ -37,6 +38,9 @@ func main() {
 	minioCleanUpAfterSec := flag.Int64("minioCleanUpAfterSec", 0, "[Optional] Cleanup minio bucket after seconds.")
 	config := flag.String("config", "", "Config file.")
 	verbose := flag.Bool("verbose", false, "Verbose Logging.")
+	metrics := flag.Bool("metrics", false, "Add metrics.")
+	metricPrefix := flag.String("metricPrefix", "streamey_", "Metric prefix.")
+	metricPort := flag.Int("metricPort", 9090, "Metric port.")
 	flag.Parse()
 
 	var c configmanager.Config
@@ -44,8 +48,14 @@ func main() {
 		c = configmanager.Get(*config)
 	}
 
+	// start metrics server
+	if *metrics {
+		metricmanager.MetricPrefix = *metricPrefix
+		go metricmanager.Listen(*metricPort)
+	}
+
 	// read stream
-	go ReadStream(*url, *maxBytes, *outputFilepath, *reconnect, *timeout, c, *validate, *verbose)
+	go ReadStream(*url, *maxBytes, *outputFilepath, *reconnect, *timeout, c, *validate, *metrics, *verbose)
 
 	// start minio sync
 	goRoutineCounter := 1
@@ -62,7 +72,7 @@ func main() {
 
 // stream
 
-func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout int, config configmanager.Config, validate string, verbose bool) {
+func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout int, config configmanager.Config, validate string, metrics bool, verbose bool) {
 	if strings.ToLower(validate) == "audio" {
 		log.Info()
 		log.Info("### Audio validation")
@@ -77,10 +87,10 @@ func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bo
 		expectations.Print()
 		log.Info("###")
 		log.Info()
-		validator := audio.NewEncodingValidator(true, expectations, verbose)
+		validator := audio.NewEncodingValidator(true, expectations, metrics, verbose)
 		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator)
 	} else if strings.ToLower(validate) == "privatebit" {
-		validator := audio.NewPrivateBitValidator(true, verbose, audio.GuessAudioType(url))
+		validator := audio.NewPrivateBitValidator(true, audio.GuessAudioType(url), metrics, verbose)
 		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator)
 	} else {
 		validator := network.DummyValidator{}

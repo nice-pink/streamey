@@ -9,6 +9,7 @@ import (
 
 	"github.com/nice-pink/goutil/pkg/log"
 	"github.com/nice-pink/streamey/pkg/audio"
+	"github.com/nice-pink/streamey/pkg/metricmanager"
 	"github.com/nice-pink/streamey/pkg/network"
 )
 
@@ -26,6 +27,9 @@ func main() {
 	test := flag.Bool("test", false, "Test sending with internal reader.")
 	verbose := flag.Bool("verbose", false, "Verbose logging.")
 	validateTest := flag.String("validateTest", "", "Validation test.")
+	metrics := flag.Bool("metrics", false, "Add metrics.")
+	metricPrefix := flag.String("metricPrefix", "streamey_", "Metric prefix.")
+	metricPort := flag.Int("metricPort", 9090, "Metric port.")
 	flag.Parse()
 
 	// read file
@@ -38,12 +42,18 @@ func main() {
 		log.Err(err, "Cannot read file.")
 	}
 
+	// start metrics server
+	if *metrics {
+		metricmanager.MetricPrefix = *metricPrefix
+		go metricmanager.Listen(*metricPort)
+	}
+
 	goRoutineCounter := 0
 
 	streamUrl := *url
 	if *test {
 		goRoutineCounter++
-		go Receive(*validateTest, *verbose)
+		go Receive(*validateTest, *metrics, *verbose)
 		// overwrite url
 		streamUrl = "localhost:9999"
 	}
@@ -60,7 +70,7 @@ func Stream(url string, bitrate float64, data []byte, reconnect bool) {
 	wg.Done()
 }
 
-func Receive(validate string, verbose bool) {
+func Receive(validate string, metrics bool, verbose bool) {
 	if strings.ToLower(validate) == "audio" {
 		log.Info()
 		log.Info("### Audio validation")
@@ -74,11 +84,11 @@ func Receive(validate string, verbose bool) {
 		expectations.Print()
 		log.Info("###")
 		log.Info()
-		validator := audio.NewEncodingValidator(true, expectations, verbose)
+		validator := audio.NewEncodingValidator(true, expectations, metrics, verbose)
 		network.ReadTest(9999, true, validator)
 	} else if strings.ToLower(validate) == "privatebit" {
 		log.Info("PrivateBit validation.")
-		validator := audio.NewPrivateBitValidator(true, verbose, audio.AudioTypeMp3)
+		validator := audio.NewPrivateBitValidator(true, audio.AudioTypeMp3, metrics, verbose)
 		network.ReadTest(9999, true, validator)
 	} else {
 		validator := network.DummyValidator{}

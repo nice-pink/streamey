@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/nice-pink/goutil/pkg/log"
+	"github.com/nice-pink/streamey/pkg/metricmanager"
 )
 
 func StreamBuffer(address string, sendBitRate float64, buffer []byte, reconnect bool) {
@@ -35,6 +36,7 @@ func StreamBuffer(address string, sendBitRate float64, buffer []byte, reconnect 
 				count = 1
 				loopCount++
 				log.Info("Start loop", loopCount)
+				metricmanager.IncWriteLoopCounter()
 			}
 			/*
 			 * calculate our instant rate over the entire transmit
@@ -53,6 +55,7 @@ func StreamBuffer(address string, sendBitRate float64, buffer []byte, reconnect 
 				if bytesWrittenCycle <= 0 {
 					log.Error("Is", bytesWrittenCycle)
 				}
+				metricmanager.IncBytesWrittenCounter(bytesWrittenCycle)
 				bytesWrittenTotal += int64(bytesWrittenCycle)
 				byteIndex += int64(bytesWrittenCycle)
 

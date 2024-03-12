@@ -4,19 +4,85 @@ import (
 	"errors"
 
 	"github.com/nice-pink/goutil/pkg/log"
+	"github.com/nice-pink/streamey/pkg/metricmanager"
 )
+
+// private bit validator
+
+type PrivateBitValidator struct {
+	active            bool
+	verbose           bool
+	metrics           bool
+	audioType         AudioType
+	lastFrameDistance uint64
+	currentFrameCount uint64
+	parser            *Parser
+}
+
+func NewPrivateBitValidator(active bool, audioType AudioType, metrics bool, verbose bool) *PrivateBitValidator {
+	return &PrivateBitValidator{verbose: verbose, active: active, audioType: audioType, parser: NewParser(), metrics: metrics}
+}
+
+func (v *PrivateBitValidator) Validate(data []byte, failEarly bool) error {
+	// bypass?
+	if !v.active {
+		return nil
+	}
+
+	// validate
+	blockAudioInfo, err := v.parser.ParseBlockwise(data, v.audioType, true, v.verbose, false)
+	if err != nil {
+		log.Err(err, "Parsing error.")
+		metricmanager.IncParseAudioErrorCounter()
+		return err
+	}
+
+	if blockAudioInfo == nil {
+		// log.Error("No block audio data.")
+		return nil
+	}
+
+	// validate encodings
+	for i, unit := range blockAudioInfo.Units {
+		if !unit.IsPrivate {
+			v.currentFrameCount++
+			continue
+		} //else {
+		// 	log.Info("Found private bit.", i, v.currentFrameCount)
+		// }
+
+		// validate distance
+		if v.lastFrameDistance > 0 {
+			if v.currentFrameCount != v.lastFrameDistance {
+				log.Error("Distances not equal. Current:", v.currentFrameCount, "!= Last:", v.lastFrameDistance, i, len(blockAudioInfo.Units))
+
+				// update metric
+				metricmanager.IncValidationErrorCounter()
+			} // else {
+			// 	log.Info("Distance between private bits:", v.lastFrameDistance)
+			// }
+		}
+
+		// reset
+		v.lastFrameDistance = v.currentFrameCount
+		v.currentFrameCount = 0
+	}
+
+	return nil
+}
 
 // encoding validator
 
 type EncodingValidator struct {
+	active       bool
 	expectations Expectations
 	verbose      bool
-	active       bool
+	metrics      bool
 	parser       *Parser
 }
 
-func NewEncodingValidator(active bool, expectations Expectations, verbose bool) *EncodingValidator {
-	return &EncodingValidator{expectations: expectations, verbose: verbose, active: active, parser: NewParser()}
+func NewEncodingValidator(active bool, expectations Expectations, metrics bool, verbose bool) *EncodingValidator {
+	return &EncodingValidator{expectations: expectations, verbose: verbose, active: active, metrics: metrics, parser: NewParser()}
 }
 
 func (v *EncodingValidator) Validate(data []byte, failEarly bool) error {
@@ -54,65 +120,6 @@ func (v *EncodingValidator) Validate(data []byte, failEarly bool) error {
 	return nil
 }
 
-// encoding validator
-
-type PrivateBitValidator struct {
-	verbose           bool
-	active            bool
-	audioType         AudioType
-	lastFrameDistance uint64
-	currentFrameCount uint64
-	parser            *Parser
-}
-
-func NewPrivateBitValidator(active bool, verbose bool, audioType AudioType) *PrivateBitValidator {
-	return &PrivateBitValidator{verbose: verbose, active: active, audioType: audioType, parser: NewParser()}
-}
-
-func (v *PrivateBitValidator) Validate(data []byte, failEarly bool) error {
-	// bypass?
-	if !v.active {
-		return nil
-	}
-
-	// validate
-	blockAudioInfo, err := v.parser.ParseBlockwise(data, v.audioType, true, v.verbose, false)
-	if err != nil {
-		log.Err(err, "Parsing error.")
-		return err
-	}
-
-	if blockAudioInfo == nil {
-		// log.Error("No block audio data.")
-		return nil
-	}
-
-	// validate encodings
-	for i, unit := range blockAudioInfo.Units {
-		if !unit.IsPrivate {
-			v.currentFrameCount++
-			continue
-		} //else {
-		// 	log.Info("Found private bit.", i, v.currentFrameCount)
-		// }
-
-		// validate distance
-		if v.lastFrameDistance > 0 {
-			if v.currentFrameCount != v.lastFrameDistance {
-				log.Error("Distances not equal. Current:", v.currentFrameCount, "!= Last:", v.lastFrameDistance, i, len(blockAudioInfo.Units))
-			} else {
-				log.Info("Distance between private bits:", v.lastFrameDistance)
-			}
-		}
-
-		// reset
-		v.lastFrameDistance = v.currentFrameCount
-		v.currentFrameCount = 0
-	}
-
-	return nil
-}
-
 // general valiation
 
 func IsValid(expectations Expectations, audioInfo AudioInfos) bool {
@@ -122,6 +129,11 @@ func IsValid(expectations Expectations, audioInfo AudioInfos) bool {
 			log.Error("IsCBR not equal:", expectations.IsCBR, "!=", audioInfo.IsCBR)
 			isValid = false
 		}
+	}
+
+	// update metric
+	if !isValid {
+		metricmanager.IncValidationErrorCounter()
 	}
 
 	return isValid
@@ -163,6 +175,11 @@ func IsValidEncoding(expectations Expectations, encoding Encoding) bool {
 	if expectations.Encoding.IsStereo != encoding.IsStereo {
 		log.Error("IsStereo not equal:", expectations.Encoding.IsStereo, "!=", encoding.IsStereo)
 		isValid = false
+	}
+
+	// update metric
+	if !isValid {
+		metricmanager.IncValidationErrorCounter()
 	}
 
 	return isValid

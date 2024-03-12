@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/nice-pink/goutil/pkg/log"
+	"github.com/nice-pink/streamey/pkg/metricmanager"
 )
 
 type Validator interface {
@@ -99,6 +100,7 @@ func ReadLineByLine(url string, dumpToFile string, timeout time.Duration, maxByt
 	}
 
 	// read data
+	var bytesReadCycle int
 	var bytesRead uint64
 	reader := bufio.NewReader(resp.Body)
 	for {
@@ -106,7 +108,9 @@ func ReadLineByLine(url string, dumpToFile string, timeout time.Duration, maxByt
 		if writeToFile {
 			file.Write(line)
 		}
-		bytesRead += uint64(len(line))
+		bytesReadCycle = len(line)
+		bytesRead += uint64(bytesReadCycle)
+		metricmanager.IncBytesReadCounter(bytesReadCycle)
 
 		// validate
 		validationErr := dataValidator.Validate(line, true)
@@ -178,6 +182,7 @@ func handleClient(conn net.Conn, dataValidator Validator) {
 			return
 		}
 		readTotal += int64(n)
+		metricmanager.IncBytesReadCounter(n)
 
 		// validate
 		dataValidator.Validate(buffer, true)

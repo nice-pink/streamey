@@ -47,6 +47,10 @@ github.com/nice-pink/goutil v0.0.25 h1:xR1oKTCDWGwNr0FHfIoC4W1YQqAoJxQL8lFXPqmhf
 github.com/nice-pink/goutil v0.0.25/go.mod h1:Q1MmrAIuePSpgepKVLGVsyzeDHoTfaWbY44eZBdaB4w=
 github.com/nice-pink/goutil v0.0.26 h1:fpRQM5jt4Em1ggV3DB5zWryDmkqGkDDfQCMNJ0UeEf4=
 github.com/nice-pink/goutil v0.0.26/go.mod h1:Q1MmrAIuePSpgepKVLGVsyzeDHoTfaWbY44eZBdaB4w=
+github.com/nice-pink/goutil v0.0.27 h1:cuadexCv5BaGA091zqBEYpWTs6ZPHUA+V1gCveolbnw=
+github.com/nice-pink/goutil v0.0.27/go.mod h1:Q1MmrAIuePSpgepKVLGVsyzeDHoTfaWbY44eZBdaB4w=
+github.com/nice-pink/goutil v0.0.28 h1:ognM7SZqIwD+CDdm6P4wbeAxUHwtFgZDWL4VuOb3SOI=
+github.com/nice-pink/goutil v0.0.28/go.mod h1:Q1MmrAIuePSpgepKVLGVsyzeDHoTfaWbY44eZBdaB4w=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_golang v1.19.0 h1:ygXvpU1AoN1MhdzckN+PyD9QJOSD4x7kmXYlnfbA6JU=
 github.com/prometheus/client_golang v1.19.0/go.mod h1:ZRM9uEAypZakd+q/x7+gmsvXdURP+DABIEIjnmDdp+k=

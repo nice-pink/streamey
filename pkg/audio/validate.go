@@ -10,13 +10,14 @@ import (
 // private bit validator
 
 type PrivateBitValidator struct {
-	active            bool
-	verbose           bool
-	metrics           bool
-	audioType         AudioType
-	lastFrameDistance uint64
-	currentFrameCount uint64
-	parser            *Parser
+	active               bool
+	verbose              bool
+	metrics              bool
+	audioType            AudioType
+	lastFrameDistance    uint64
+	currentFrameCount    uint64
+	parser               *Parser
+	foundInitialDistance bool
 }
 
 func NewPrivateBitValidator(active bool, audioType AudioType, metrics bool, verbose bool) *PrivateBitValidator {
@@ -54,10 +55,15 @@ func (v *PrivateBitValidator) Validate(data []byte, failEarly bool) error {
 		// validate distance
 		if v.lastFrameDistance > 0 {
 			if v.currentFrameCount != v.lastFrameDistance {
-				log.Error("Distances not equal. Current:", v.currentFrameCount, "!= Last:", v.lastFrameDistance, i, len(blockAudioInfo.Units))
-
-				// update metric
-				metricmanager.IncValidationErrorCounter()
+				if !v.foundInitialDistance {
+					// skip first distance as it will usually be an error!
+					v.foundInitialDistance = true
+					log.Info("Skip initial distance.", v.currentFrameCount)
+				} else {
+					log.Error("Distances not equal. Current:", v.currentFrameCount, "!= Last:", v.lastFrameDistance, i, len(blockAudioInfo.Units))
+					// update metric
+					metricmanager.IncValidationErrorCounter()
+				}
 			} // else {
 			// 	log.Info("Distance between private bits:", v.lastFrameDistance)
 			// }

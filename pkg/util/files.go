@@ -18,13 +18,13 @@ func CleanUp(folder string, sec int64, ignoreHiddenFiles bool, delete bool) {
 	// logs
 	ago := -time.Duration(sec) * time.Second
 	dateThreshold := time.Now().Add(ago)
-	log.Info()
+	log.Newline()
 	log.Info("Files older than:", dateThreshold)
 	for _, file := range files {
 		log.Info(file)
 	}
 	log.Info(strconv.Itoa(len(files)), "files")
-	log.Info()
+	log.Newline()
 
 	// delete
 	if delete {

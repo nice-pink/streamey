@@ -25,7 +25,6 @@ const (
 
 func main() {
 	log.Info("--- Start readey ---")
-	log.Time()
 
 	// flags
 	url := flag.String("url", "", "Stream url")
@@ -74,7 +73,7 @@ func main() {
 
 func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout int, config configmanager.Config, validate string, metrics bool, verbose bool) {
 	if strings.ToLower(validate) == "audio" {
-		log.Info()
+		log.Newline()
 		log.Info("### Audio validation")
 		// expectations := audio.Expectations{
 		// 	IsCBR: true,
@@ -86,7 +85,7 @@ func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bo
 		expectations := config.Expectations
 		expectations.Print()
 		log.Info("###")
-		log.Info()
+		log.Newline()
 		validator := audio.NewEncodingValidator(true, expectations, metrics, verbose)
 		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator)
 	} else if strings.ToLower(validate) == "privatebit" {

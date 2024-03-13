@@ -29,7 +29,7 @@ func (v DummyValidator) Validate(data []byte, failEarly bool) error {
 func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout time.Duration, dataValidator Validator) {
 	// early exit
 	if url == "" {
-		log.Info()
+		log.Newline()
 		log.Error("Define url!")
 		flag.Usage()
 		os.Exit(2)
@@ -46,15 +46,13 @@ func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bo
 		log.Info("Dump data to file:", outputFilepath)
 	}
 
-	log.Info()
+	log.Newline()
 	iteration := 0
 	for {
 		log.Info("Start connection", iteration)
-		log.Time()
 		filepath := getFilePath(outputFilepath, iteration, true)
 		ReadLineByLine(url, filepath, timeout, maxBytes, "", dataValidator)
-		log.Time()
-		log.Info()
+		log.Newline()
 		if !reconnect {
 			break
 		}
@@ -120,7 +118,7 @@ func ReadLineByLine(url string, dumpToFile string, timeout time.Duration, maxByt
 
 		// exit?
 		if maxBytes > 0 && bytesRead > uint64(maxBytes) {
-			log.Info()
+			log.Newline()
 			log.Info("Stop: Max bytes read", bytesRead)
 			break
 		}

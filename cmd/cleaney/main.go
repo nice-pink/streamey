@@ -10,7 +10,6 @@ import (
 
 func main() {
 	log.Info("--- Start cleaney ---")
-	log.Time()
 
 	folder := flag.String("folder", "", "Folder containing files.")
 	sec := flag.Int64("sec", -1, "All files are deleted older than 'sec' seconds.")

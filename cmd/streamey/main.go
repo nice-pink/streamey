@@ -19,7 +19,6 @@ var wg sync.WaitGroup
 
 func main() {
 	log.Info("--- Start streamey ---")
-	log.Time()
 
 	// flags
 	url := flag.String("url", "", "Destination url")
@@ -107,7 +106,7 @@ func Stream(url string, bitrate float64, sampleRate int, data []byte, reconnect 
 
 func Receive(validate string, metrics bool, verbose bool) {
 	if strings.ToLower(validate) == "audio" {
-		log.Info()
+		log.Newline()
 		log.Info("### Audio validation")
 		expectations := audio.Expectations{
 			IsCBR: true,
@@ -118,7 +117,7 @@ func Receive(validate string, metrics bool, verbose bool) {
 		}
 		expectations.Print()
 		log.Info("###")
-		log.Info()
+		log.Newline()
 		validator := audio.NewEncodingValidator(true, expectations, metrics, verbose)
 		network.ReadTest(9999, true, validator)
 	} else if strings.ToLower(validate) == "privatebit" {

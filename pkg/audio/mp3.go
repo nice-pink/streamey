@@ -67,11 +67,11 @@ func GetMpegHeader(data []byte, index int64) MpegHeader {
 
 	// version
 	version := util.BitsFromBytes(data, 11, 2)
-	header.MpegVersion = GetMpegVersion(int8(version[0]))
+	header.MpegVersion = MpegVersion(int8(version[0]))
 
 	// // layer
 	layer := util.BitsFromBytes(data, 13, 2)
-	header.Layer = GetMpegLayer(int8(layer[0]))
+	header.Layer = MpegLayer(int8(layer[0]))
 
 	// //protect
 	header.Protected = util.BoolFromBit(data, 15)
@@ -92,7 +92,7 @@ func GetMpegHeader(data []byte, index int64) MpegHeader {
 
 	// // channel mode
 	channelMode := util.BitsFromBytes(data, 24, 2)
-	header.ChannelMode = GetMpegChannelMode(int8(channelMode[0]))
+	header.ChannelMode = ChannelMode(int8(channelMode[0]))
 
 	// // mode extension
 	modeExtension := util.BitsFromBytes(data, 26, 2)
@@ -211,10 +211,7 @@ func GetMpegFrameSize(data []byte, header MpegHeader, requiredSampleRate int, fr
 		return -1
 	}
 
-	return GetMpegPacketSize(header.Bitrate, header.SampleRate, frameSizeSamples, 8)
-}
-
-func GetMpegPacketSize(bitrate int, sampleRate int, frameSizeSamples int, padding int) int {
+	// is valid
 	var bytesPerFrame int
 	if frameSizeSamples == 0 {
 		bytesPerFrame = 144
@@ -222,8 +219,8 @@ func GetMpegPacketSize(bitrate int, sampleRate int, frameSizeSamples int, paddin
 		bytesPerFrame = frameSizeSamples / 8
 	}
 
-	packet := float64(bytesPerFrame) * float64(bitrate*1000) / float64(sampleRate+padding)
-
+	padding := 8
+	packet := float64(bytesPerFrame) * float64(header.Bitrate*1000) / float64(header.SampleRate+padding)
 	return int(packet)
 }
 
@@ -286,44 +283,17 @@ func (header MpegHeader) IsValid(verbose bool) bool {
 	return true
 }
 
-func GetMpegVersion(value int8) MpegVersion {
-	if value == 0 {
-		return MpegVersion2_5
-	}
-	if value == 2 {
-		return MpegVersion2
-	}
-	if value == 3 {
-		return MpegVersion1
-	}
-	return MpegVersionReserved
+func SetMpegPrivate(header []byte, offset uint64) {
+	var mask uint8 = 1
+	header[offset+2] = header[offset+2] | mask
 }
 
-func GetMpegLayer(value int8) MpegLayer {
-	if value == 3 {
-		return MpegLayer1
-	}
-	if value == 2 {
-		return MpegLayer2
-	}
-	if value == 1 {
-		return MpegLayer3
-	}
-	return MpegLayerReserved
+func SetMpegUnPrivate(header []byte, offset uint64) {
+	var mask uint8 = 14
+	header[offset+2] = header[offset+2] & mask
 }
 
-func GetMpegChannelMode(value int8) ChannelMode {
-	if value == 0 {
-		return Stereo
-	}
-	if value == 1 {
-		return JoinedStereo
-	}
-	if value == 2 {
-		return DualChannel
-	}
-	return Mono
-}
+//
 
 func GetMpegSampleRate(value int8, mpegVersion MpegVersion) int {
 	if value == 0 {
@@ -600,14 +570,4 @@ func GetMpegChannelModeString(cm ChannelMode) string {
 
 func GetMpegFrameSizeSamples() int {
 	return 1152
-}
-
-func SetMpegPrivate(header []byte, offset uint64) {
-	var mask uint8 = 1
-	header[offset+2] = header[offset+2] | mask
-}
-
-func SetMpegUnPrivate(header []byte, offset uint64) {
-	var mask uint8 = 14
-	header[offset+2] = header[offset+2] & mask
 }

@@ -37,9 +37,73 @@ const (
 	Mono
 )
 
+// const
 const (
-	MpegHeaderSize int    = 4
-	MpegSyncTag    string = "FFE0"
+	MpegHeaderSize  int    = 4
+	MpegSyncTag     string = "FFE0"
+	MpegLayersMax   int    = 4
+	MpegVersionsMax int    = 4
+)
+
+var (
+	mpegSampleRates = [MpegVersionsMax][3]int{
+		{11025, 12000, 8000},  //MpegVersion2_5
+		{0, 0, 0},             //MpegVersionReserved
+		{22050, 24000, 16000}, //MpegVersion2
+		{44100, 48000, 32000}, //MpegVersion1
+	}
+	mpegBitrates = [MpegVersionsMax][MpegLayersMax][15]int{
+		{ // MpegVersion2_5
+			{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},                       // MpegLayerReserved
+			{0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160},      // MpegLayer3
+			{0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160},      // MpegLayer2
+			{0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256}, // MpegLayer1
+		},
+		{ // MpegVersionReserved
+			{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // MpegLayerReserved
+			{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // MpegLayer3
+			{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // MpegLayer2
+			{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // MpegLayer1
+		},
+		{ // MpegVersion2
+			{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},                       // MpegLayerReserved
+			{0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160},      // MpegLayer3
+			{0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160},      // MpegLayer2
+			{0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256}, // MpegLayer1
+		},
+		{ // MpegVersion1
+			{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},                          // MpegLayerReserved
+			{0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320},     // MpegLayer3
+			{0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384},    // MpegLayer2
+			{0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448}, // MpegLayer1
+		},
+	}
+	mpegSamples = [MpegVersionsMax][MpegLayersMax]int{
+		{ // MpegVersion2_5
+			0,
+			576,
+			1152,
+			384,
+		},
+		{ // MpegVersionReserved
+			0,
+			0,
+			0,
+			0,
+		},
+		{ // MpegVersion2
+			0,
+			576,
+			1152,
+			384,
+		},
+		{ // MpegVersion1
+			0,
+			1152,
+			1152,
+			384,
+		},
+	}
 )
 
 // header
@@ -78,7 +142,7 @@ func GetMpegHeader(data []byte, index int64) MpegHeader {
 
 	// bitrate
 	bitrate := util.BitsFromBytes(data, 16, 4)
-	header.Bitrate = GetMpegBitrate(bitrate, MpegLayer3, header.MpegVersion)
+	header.Bitrate = GetMpegBitrate(int8(bitrate[0]), MpegLayer3, header.MpegVersion)
 
 	// // sample rate
 	sampleRate := util.BitsFromBytes(data, 20, 2)
@@ -109,7 +173,7 @@ func GetMpegHeader(data []byte, index int64) MpegHeader {
 	header.Emphasis = int8(emphasis[0])
 
 	// size
-	header.Size = GetMpegFrameSize(data, header, 0, GetMpegFrameSizeSamples())
+	header.Size = GetMpegFrameSize(data, header, 0, GetMpegFrameSizeSamples(header.MpegVersion, header.Layer))
 
 	return header
 }
@@ -141,7 +205,7 @@ func GetMpegEncoding(header MpegHeader) Encoding {
 		CodecName:     "mp3",
 		Bitrate:       header.Bitrate,
 		SampleRate:    header.SampleRate,
-		FrameSize:     GetMpegFrameSizeSamples(),
+		FrameSize:     GetMpegFrameSizeSamples(header.MpegVersion, header.Layer),
 		IsStereo:      header.ChannelMode < 3,
 	}
 }
@@ -295,232 +359,22 @@ func SetMpegUnPrivate(header []byte, offset uint64) {
 
 //
 
-func GetMpegSampleRate(value int8, mpegVersion MpegVersion) int {
-	if value == 0 {
-		if mpegVersion == MpegVersion1 {
-			return 44100
-		}
-		if mpegVersion == MpegVersion2 {
-			return 22500
-		}
-		if mpegVersion == MpegVersion2_5 {
-			return 11025
-		}
+func GetMpegSampleRate(value int8, version MpegVersion) int {
+	if value > 2 {
+		return -1
 	}
-	if value == 1 {
-		if mpegVersion == MpegVersion1 {
-			return 48000
-		}
-		if mpegVersion == MpegVersion2 {
-			return 24000
-		}
-		if mpegVersion == MpegVersion2_5 {
-			return 12000
-		}
-	}
-	if value == 2 {
-		if mpegVersion == MpegVersion1 {
-			return 32000
-		}
-		if mpegVersion == MpegVersion2 {
-			return 16000
-		}
-		if mpegVersion == MpegVersion2_5 {
-			return 8000
-		}
-	}
-
-	// reserved
-	return -1
+	return mpegSampleRates[version][value]
 }
 
-func GetMpegBitrate(bytes []byte, layer MpegLayer, version MpegVersion) int {
-	value := int(bytes[0])
-	if value == 0 {
+func GetMpegBitrate(value int8, layer MpegLayer, version MpegVersion) int {
+	if value == 0 || layer == MpegLayerReserved || version == MpegVersionReserved {
 		return 0
 	}
-	if value == 1 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 8
-		}
-		return 32
-	}
-	if value == 2 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 16
-		}
-		if version == MpegVersion1 && layer == MpegLayer1 {
-			return 64
-		}
-		if version == MpegVersion1 && layer == MpegLayer3 {
-			return 40
-		}
-		return 48
-	}
-	if value == 3 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 24
-		}
-		if version == MpegVersion1 && layer == MpegLayer1 {
-			return 96
-		}
-		if version == MpegVersion1 && layer == MpegLayer3 {
-			return 48
-		}
-		return 56
-	}
-	if value == 4 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 32
-		}
-		if version == MpegVersion1 && layer == MpegLayer1 {
-			return 128
-		}
-		if version == MpegVersion1 && layer == MpegLayer3 {
-			return 56
-		}
-		return 64
-	}
-	if value == 5 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 40
-		}
-		if version == MpegVersion1 && layer == MpegLayer1 {
-			return 160
-		}
-		if version == MpegVersion1 && layer == MpegLayer3 {
-			return 64
-		}
-		return 80
-	}
-	if value == 6 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 48
-		}
-		if version == MpegVersion1 && layer == MpegLayer1 {
-			return 192
-		}
-		if version == MpegVersion1 && layer == MpegLayer3 {
-			return 80
-		}
-		return 96
-	}
-	if value == 7 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 56
-		}
-		if version == MpegVersion1 && layer == MpegLayer1 {
-			return 224
-		}
-		if version == MpegVersion1 && layer == MpegLayer3 {
-			return 96
-		}
-		return 112
-	}
-	if value == 8 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 64
-		}
-		if version == MpegVersion1 && layer == MpegLayer1 {
-			return 256
-		}
-		if version == MpegVersion1 && layer == MpegLayer3 {
-			return 112
-		}
-		return 128
-	}
-	if value == 9 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 80
-		}
-		if version == MpegVersion1 && layer == MpegLayer1 {
-			return 288
-		}
-		if version == MpegVersion1 && layer == MpegLayer3 {
-			return 128
-		}
-		if version == MpegVersion1 && layer == MpegLayer2 {
-			return 160
-		}
-		return 144
-	}
-	if value == 10 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 96
-		}
-		if version == MpegVersion1 && layer == MpegLayer1 {
-			return 320
-		}
-		if version == MpegVersion1 && layer == MpegLayer3 {
-			return 160
-		}
-		if version == MpegVersion1 && layer == MpegLayer2 {
-			return 192
-		}
-		return 160
-	}
-	if value == 11 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 112
-		}
-		if version == MpegVersion1 && layer == MpegLayer1 {
-			return 352
-		}
-		if version == MpegVersion1 && layer == MpegLayer3 {
-			return 192
-		}
-		if version == MpegVersion1 && layer == MpegLayer2 {
-			return 224
-		}
-		return 176
-	}
-	if value == 12 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 128
-		}
-		if version == MpegVersion1 && layer == MpegLayer1 {
-			return 384
-		}
-		if version == MpegVersion1 && layer == MpegLayer3 {
-			return 224
-		}
-		if version == MpegVersion1 && layer == MpegLayer2 {
-			return 256
-		}
-		return 192
-	}
-	if value == 13 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 144
-		}
-		if version == MpegVersion1 && layer == MpegLayer1 {
-			return 416
-		}
-		if version == MpegVersion1 && layer == MpegLayer3 {
-			return 256
-		}
-		if version == MpegVersion1 && layer == MpegLayer2 {
-			return 320
-		}
-		return 224
-	}
-	if value == 14 {
-		if version == MpegVersion2 && (layer == MpegLayer2 || layer == MpegLayer3) {
-			return 160
-		}
-		if version == MpegVersion1 && layer == MpegLayer1 {
-			return 448
-		}
-		if version == MpegVersion1 && layer == MpegLayer3 {
-			return 320
-		}
-		if version == MpegVersion1 && layer == MpegLayer2 {
-			return 384
-		}
-		return 256
-	}
+	return mpegBitrates[version][layer][value]
+}
 
-	return -1
+func GetMpegFrameSizeSamples(version MpegVersion, layer MpegLayer) int {
+	return mpegSamples[version][layer]
 }
 
 // labels
@@ -566,8 +420,4 @@ func GetMpegChannelModeString(cm ChannelMode) string {
 		return "DualChannel"
 	}
 	return "Mono"
-}
-
-func GetMpegFrameSizeSamples() int {
-	return 1152
 }

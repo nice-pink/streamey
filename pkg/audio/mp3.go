@@ -58,10 +58,12 @@ type MpegHeader struct {
 	Original      bool
 	Emphasis      int8
 	Size          int
+	Index         int64
 }
 
-func GetMpegHeader(data []byte) MpegHeader {
+func GetMpegHeader(data []byte, index int64) MpegHeader {
 	header := MpegHeader{}
+	header.Index = index
 
 	// version
 	version := util.BitsFromBytes(data, 11, 2)
@@ -162,7 +164,7 @@ func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, includeUni
 		}
 
 		// get frame size
-		header := GetMpegHeader(data[index:])
+		header := GetMpegHeader(data[index:], int64(index))
 		frameSize := GetMpegFrameSize(data[index:], header, encoding.SampleRate, encoding.FrameSize)
 		if frameSize <= 0 {
 			index++
@@ -225,34 +227,6 @@ func GetMpegPacketSize(bitrate int, sampleRate int, frameSizeSamples int, paddin
 	return int(packet)
 }
 
-func GetNextFrameIndexMpeg(data []byte, offset uint64) int64 {
-	dataSize := len(data)
-	var index int64 = int64(offset)
-	for {
-		// exit?
-		if index+int64(MpegHeaderSize) > int64(dataSize) {
-			break
-		}
-
-		// find sync header
-		if !StartsWithMpegSync(data[index:]) {
-			index++
-			continue
-		}
-
-		// get frame size
-		header := GetMpegHeader(data[index:])
-		frameSize := GetMpegFrameSize(data[index:], header, -1, 0)
-		if frameSize <= 0 {
-			index++
-			continue
-		}
-
-		return index
-	}
-	return -1
-}
-
 func GetNextMpegHeader(data []byte, offset uint64) *MpegHeader {
 	dataSize := len(data)
 	var index int64 = int64(offset)
@@ -269,7 +243,7 @@ func GetNextMpegHeader(data []byte, offset uint64) *MpegHeader {
 		}
 
 		// get frame size
-		header := GetMpegHeader(data[index:])
+		header := GetMpegHeader(data[index:], index)
 		frameSize := GetMpegFrameSize(data[index:], header, -1, 0)
 		if frameSize <= 0 {
 			index++

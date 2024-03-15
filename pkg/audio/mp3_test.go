@@ -30,7 +30,7 @@ func TestStartWithSyncFailed(t *testing.T) {
 func TestGetHeader(t *testing.T) {
 	hexHeader := "FFFAE10C"
 	bytes, _ := hex.DecodeString(hexHeader)
-	header := GetMpegHeader(bytes)
+	header := GetMpegHeader(bytes, 0)
 
 	if header.MpegVersion != MpegVersion1 {
 		t.Errorf("Version: got %d != want %d", header.MpegVersion, MpegVersion1)
@@ -59,17 +59,17 @@ func TestSetPrivate(t *testing.T) {
 	// get
 	hexHeader := "FFFAE10C"
 	bytes, _ := hex.DecodeString(hexHeader)
-	header := GetMpegHeader(bytes)
+	header := GetMpegHeader(bytes, 0)
 	if header.Private != true {
 		t.Error("Private: got true != want false")
 	}
-	SetMpegUnPrivate(bytes)
-	unprivateHeader := GetMpegHeader(bytes)
+	SetMpegUnPrivate(bytes, 0)
+	unprivateHeader := GetMpegHeader(bytes, 0)
 	if unprivateHeader.Private != false {
 		t.Error("Private: got false != want true")
 	}
-	SetMpegPrivate(bytes)
-	privateHeader := GetMpegHeader(bytes)
+	SetMpegPrivate(bytes, 0)
+	privateHeader := GetMpegHeader(bytes, 0)
 	if privateHeader.Private != true {
 		t.Error("Private: got true != want false")
 	}

@@ -55,7 +55,11 @@ func GuessAudioType(path string) AudioType {
 
 func GetFirstFrameIndex(data []byte, offset uint64, audioTypeGuessed AudioType) int64 {
 	if audioTypeGuessed == AudioTypeMp3 {
-		return GetNextFrameIndexMpeg(data, offset)
+		header := GetNextMpegHeader(data, offset)
+		if header != nil {
+			return header.Index
+		}
+		return -1
 	}
 	return int64(offset)
 }
@@ -273,7 +277,7 @@ func GetEncodingFromFirstMpegHeader(data []byte, offset uint64) (Encoding, error
 	fmt.Println("*************")
 	fmt.Println("Initial header")
 	fmt.Println("use encoding!")
-	header := GetMpegHeader(data)
+	header := GetMpegHeader(data, int64(offset))
 	if !header.IsValid(true) {
 		fmt.Println("Error: Header is not valid")
 		header.Print(false)

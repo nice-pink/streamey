@@ -10,6 +10,7 @@ import (
 
 // https://www.p23.nl/projects/aac-header/
 // https://hydrogenaud.io/index.php/topic,3026.0.html
+// https://developer.apple.com/documentation/quicktime-file-format#//apple_ref/doc/uid/TP40000939-CH1-SW2
 
 // version
 type AacMpegVersion int

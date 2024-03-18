@@ -40,7 +40,7 @@ const (
 // const
 const (
 	MpegHeaderSize  int    = 4
-	MpegSyncTag     string = "FFE0"
+	MpegSyncWord    string = "FFE0"
 	MpegLayersMax   int    = 4
 	MpegVersionsMax int    = 4
 )
@@ -133,32 +133,32 @@ func GetMpegHeader(data []byte, index int64) MpegHeader {
 	version := util.BitsFromBytes(data, 11, 2)
 	header.MpegVersion = MpegVersion(int8(version[0]))
 
-	// // layer
+	// layer
 	layer := util.BitsFromBytes(data, 13, 2)
 	header.Layer = MpegLayer(int8(layer[0]))
 
-	// //protect
+	// protect
 	header.Protected = util.BoolFromBit(data, 15)
 
 	// bitrate
 	bitrate := util.BitsFromBytes(data, 16, 4)
 	header.Bitrate = GetMpegBitrate(int8(bitrate[0]), MpegLayer3, header.MpegVersion)
 
-	// // sample rate
+	// sample rate
 	sampleRate := util.BitsFromBytes(data, 20, 2)
 	header.SampleRate = GetMpegSampleRate(int8(sampleRate[0]), header.MpegVersion)
 
-	// // padding
+	// padding
 	header.Padding = util.BoolFromBit(data, 22)
 
-	// // private
+	// private
 	header.Private = util.BoolFromBit(data, 23)
 
-	// // channel mode
+	// channel mode
 	channelMode := util.BitsFromBytes(data, 24, 2)
 	header.ChannelMode = ChannelMode(int8(channelMode[0]))
 
-	// // mode extension
+	// mode extension
 	modeExtension := util.BitsFromBytes(data, 26, 2)
 	header.ModeExtension = int8(modeExtension[0])
 
@@ -179,7 +179,7 @@ func GetMpegHeader(data []byte, index int64) MpegHeader {
 }
 
 func StartsWithMpegSync(data []byte) bool {
-	return util.BytesEqualHexWithMask(MpegSyncTag, MpegSyncTag, data)
+	return util.BytesEqualHexWithMask(MpegSyncWord, MpegSyncWord, data)
 }
 
 func (h MpegHeader) Print(extended bool) {
@@ -303,8 +303,14 @@ func GetNextMpegHeader(data []byte, offset uint64) *MpegHeader {
 			continue
 		}
 
-		// get frame size
+		// get header
 		header := GetMpegHeader(data[index:], index)
+		if !header.IsValid(false) {
+			index++
+			continue
+		}
+
+		// get frame size
 		frameSize := GetMpegFrameSize(data[index:], header, -1, 0)
 		if frameSize <= 0 {
 			index++
@@ -331,15 +337,15 @@ func (header MpegHeader) IsValid(verbose bool) bool {
 		}
 		return false
 	}
-	if header.SampleRate == -1 {
+	if header.SampleRate <= 0 {
 		if verbose {
-			fmt.Println("Invalid sample rate")
+			fmt.Println("Invalid sample rate", header.SampleRate)
 		}
 		return false
 	}
-	if header.Bitrate == -1 {
+	if header.Bitrate <= 0 {
 		if verbose {
-			fmt.Println("Invalid bitrate")
+			fmt.Println("Invalid bitrate", header.Bitrate)
 		}
 		return false
 	}
@@ -353,7 +359,7 @@ func SetMpegPrivate(header []byte, offset uint64) {
 }
 
 func SetMpegUnPrivate(header []byte, offset uint64) {
-	var mask uint8 = 14
+	var mask uint8 = 254
 	header[offset+2] = header[offset+2] & mask
 }
 

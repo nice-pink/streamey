@@ -12,3 +12,4 @@ test_files/
 # random
 minio-secret.json
 .env
+.vscode/

@@ -25,17 +25,26 @@ func BoolFromBit(data []byte, bitIndex int) bool {
 
 func BitsFromBytes(data []byte, bitIndex int, bitCount int) []byte {
 	byteIndex := bitIndex / 8
-	byteIndexOffset := int(math.Ceil(float64(bitCount) / 8))
+	inByteIndex := bitIndex % 8
+	byteIndexOffset := int(math.Ceil(float64(bitCount+inByteIndex) / 8))
 	bytes := make([]byte, byteIndexOffset)
 	_ = copy(bytes, data[byteIndex:byteIndex+byteIndexOffset])
 
-	// shift
-	inByteIndex := bitIndex % 8
+	// shift left
 	if inByteIndex != 0 {
 		ShiftLeft(bytes, inByteIndex)
 	}
-	ShiftLeft(bytes, -(8 - bitCount))
-	return bytes
+
+	// shift right
+	lastShift := 8 - bitCount
+	if lastShift < 0 {
+		lastShift = 8 - bitCount%8
+	}
+	ShiftLeft(bytes, -lastShift)
+
+	// return relevant bytes
+	bytesMax := int(math.Ceil(float64(bitCount) / 8))
+	return bytes[:bytesMax]
 }
 
 func BytesEqualHex(h string, compare []byte) bool {
@@ -62,7 +71,7 @@ func BytesEqualHex(h string, compare []byte) bool {
 	return true
 }
 
-func BytesEqualHexWithMask(h string, mask string, compare []byte) bool {
+func BytesEqualHexWithMask(h string, mask string, buffer []byte) bool {
 	// decode hex strings
 	value, err := hex.DecodeString(h)
 	if err != nil {
@@ -76,14 +85,14 @@ func BytesEqualHexWithMask(h string, mask string, compare []byte) bool {
 	}
 
 	// validate
-	if len(value) != len(valueMask) || len(value) > len(compare) {
+	if len(value) != len(valueMask) || len(value) > len(buffer) {
 		fmt.Println("Hex compare data too short.")
 		return false
 	}
 
 	// compare
 	for i, b := range value {
-		if compare[i]&valueMask[i] != b {
+		if buffer[i]&valueMask[i] != b {
 			// fmt.Println(int8(compare[i]&valueMask[i]) != int8(b))
 			return false
 		}
@@ -117,12 +126,14 @@ func Unsynchsafe(value uint32) uint32 {
 func ShiftLeft(data []byte, bits int) {
 	n := len(data)
 	if bits < 0 {
+		// shift right
 		bits = -bits
 		for i := n - 1; i > 0; i-- {
 			data[i] = data[i]>>bits | data[i-1]<<(8-bits)
 		}
 		data[0] >>= bits
 	} else {
+		// shift left
 		for i := 0; i < n-1; i++ {
 			data[i] = data[i]<<bits | data[i+1]>>(8-bits)
 		}

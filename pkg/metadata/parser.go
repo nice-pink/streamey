@@ -7,6 +7,10 @@ func GetTagType(data []byte) MetadataTagType {
 		fmt.Println("Tag type id3v2.")
 		return MetadataTagTypeId3V2
 	}
+	if StartsWithQuicktimeSync(data) {
+		fmt.Println("Tag type quicktime.")
+		return MetadataTagTypeQuicktime
+	}
 	return MetadataTagTypeUnknown
 }
 
@@ -21,5 +25,13 @@ func GetTagSize(data []byte) int64 {
 		}
 		return int64(GetId3V2TagSize(data))
 	}
+	if tagType == MetadataTagTypeQuicktime {
+		if !IsValidQuicktimeHeader(data) {
+			fmt.Println("Invalid header")
+			return -1
+		}
+		return int64(GetQuicktimeTagSize(data))
+	}
+	fmt.Println("Does not recognize metadata chunk.")
 	return 0
 }

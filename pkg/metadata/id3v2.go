@@ -7,13 +7,13 @@ import (
 )
 
 type Id3V2Tag struct {
-	TagSize int32
+	TagSize int64
 }
 
 const (
-	HeaderSize int    = 10
-	Id3V2Sync  string = "494433"
-	FooterMask string = "10"
+	Id3V2HeaderSize int    = 10
+	Id3V2Sync       string = "494433"
+	Id3V2FooterMask string = "10"
 )
 
 func GetId3V2Tag(data []byte) Id3V2Tag {
@@ -23,7 +23,7 @@ func GetId3V2Tag(data []byte) Id3V2Tag {
 }
 
 func IsValidId3V2Header(data []byte) bool {
-	if len(data) < HeaderSize {
+	if len(data) < Id3V2HeaderSize {
 		return false
 	}
 
@@ -43,16 +43,16 @@ func HasId3V2Footer(data []byte) bool {
 		return false
 	}
 	bytes := []byte{data[5]}
-	return util.BytesEqualHexWithMask(FooterMask, FooterMask, bytes)
+	return util.BytesEqualHexWithMask(Id3V2FooterMask, Id3V2FooterMask, bytes)
 }
 
-func GetId3V2TagSize(data []byte) int32 {
+func GetId3V2TagSize(data []byte) int64 {
 	bytes := data[6:10]
 	headerValue := binary.BigEndian.Uint32(bytes)
 
 	footerSize := 0
 	if HasId3V2Footer(data) {
-		footerSize = HeaderSize
+		footerSize = Id3V2HeaderSize
 	}
-	return int32(util.Unsynchsafe(headerValue)) + int32(footerSize)
+	return int64(util.Unsynchsafe(headerValue)) + int64(footerSize)
 }

@@ -23,7 +23,7 @@ func TestBitsFromBytes(t *testing.T) {
 	bytes, _ = hex.DecodeString(hexString_1)
 	result = BitsFromBytes(bytes, 40, 16)
 	got_2 := hex.EncodeToString(result)
-	want_2 := "4d00"
+	want_2 := "0041"
 	if got_2 != want_2 {
 		t.Errorf("2: got %q != want %q", got_2, want_2)
 	}

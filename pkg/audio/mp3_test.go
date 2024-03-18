@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestStartWithSync(t *testing.T) {
+func TestMpegStartWithSync(t *testing.T) {
 	hexHeader := "FFFAE10C"
 	data, _ := hex.DecodeString(hexHeader)
 
@@ -16,7 +16,7 @@ func TestStartWithSync(t *testing.T) {
 	}
 }
 
-func TestStartWithSyncFailed(t *testing.T) {
+func TestMpegStartWithSyncFailed(t *testing.T) {
 	hexHeader := "EFFAE10C"
 	data, _ := hex.DecodeString(hexHeader)
 
@@ -27,7 +27,7 @@ func TestStartWithSyncFailed(t *testing.T) {
 	}
 }
 
-func TestGetHeader(t *testing.T) {
+func TestMpegGetHeader(t *testing.T) {
 	hexHeader := "FFFAE10C"
 	bytes, _ := hex.DecodeString(hexHeader)
 	header := GetMpegHeader(bytes, 0)
@@ -55,7 +55,7 @@ func TestGetHeader(t *testing.T) {
 	}
 }
 
-func TestSetPrivate(t *testing.T) {
+func TestMpegSetPrivate(t *testing.T) {
 	// get
 	hexHeader := "FFFAE10C"
 	bytes, _ := hex.DecodeString(hexHeader)

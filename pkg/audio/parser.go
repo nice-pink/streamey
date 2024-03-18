@@ -1,6 +1,7 @@
 package audio
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -47,8 +48,8 @@ func GuessAudioType(path string) AudioType {
 	if strings.ToUpper(ext) == "MP3" {
 		return AudioTypeMp3
 	}
-	if strings.ToUpper(ext) == "AAC" {
-		return AudioTypeAAC
+	if strings.ToUpper(ext) == "AAC" || strings.ToUpper(ext) == "M4A" {
+		return AudioTypeAac
 	}
 	return AudioTypeUnknown
 }
@@ -61,14 +62,30 @@ func GetFirstFrameIndex(data []byte, offset uint64, audioTypeGuessed AudioType) 
 		}
 		return -1
 	}
-	return int64(offset)
+	if audioTypeGuessed == AudioTypeAac {
+		header := GetNextAdtsHeader(data, offset)
+		if header != nil {
+			encoded := hex.EncodeToString(data[header.Index : header.Index+7])
+			fmt.Println(encoded)
+			return header.Index
+		}
+		return -1
+	}
+	return -1 // int64(offset)
 }
 
-func GetAudioType(data []byte) AudioType {
+func GetAudioType(data []byte, offset uint64, typeGuessed AudioType) AudioType {
 	// get audio type
-	if StartsWithMpegSync(data) {
+	if typeGuessed == AudioTypeMp3 && StartsWithMpegSync(data[offset:]) {
+		fmt.Println("Is mp3")
 		return AudioTypeMp3
 	}
+	if typeGuessed == AudioTypeAac && StartsWithAdtsSync(data, offset) {
+		fmt.Println("Is aac")
+		return AudioTypeAac
+
+	}
+	fmt.Println("Is unknown")
 	return AudioTypeUnknown
 }
 
@@ -97,31 +114,47 @@ func (p *Parser) Parse(data []byte, filepath string, includeUnitEncoding bool, v
 	if p.audioInfo.TagSize > 0 {
 		audioStart = p.audioInfo.TagSize - 1
 	}
-	audioTypeGuessed := GuessAudioType(filepath)
-	firstFrameIndex := GetFirstFrameIndex(data, uint64(audioStart), audioTypeGuessed)
+
+	// get audio type
+	p.audioType = GuessAudioType(filepath)
+	if p.audioType == AudioTypeUnknown {
+		fmt.Println("Unknown audio type.")
+		return nil
+	}
+
+	// get first frame
+	firstFrameIndex := GetFirstFrameIndex(data, uint64(audioStart), p.audioType)
+	fmt.Println("First frame index", firstFrameIndex)
 	if firstFrameIndex < 0 {
 		return nil
 	}
 	p.skippedUntilFirstFrame = uint64(firstFrameIndex - p.audioInfo.TagSize)
 	p.foundFirstFrame = firstFrameIndex > audioStart
 
-	// get audio
-	p.audioType = GetAudioType(data[firstFrameIndex:])
-	if p.audioType == AudioTypeUnknown {
+	// confirm audio type
+	if GetAudioType(data, uint64(firstFrameIndex), p.audioType) != p.audioType {
 		fmt.Println("Unknown audio type.")
 		return nil
 	}
 
+	var err error
 	if p.audioType == AudioTypeMp3 {
-		p.encoding, _ = GetEncodingFromFirstMpegHeader(data, uint64(firstFrameIndex))
+		p.encoding, err = GetEncodingFromFirstMpegHeader(data, uint64(firstFrameIndex))
+		if err != nil {
+			return nil
+		}
 		p.audioInfo = ParseMp3(data[firstFrameIndex:], p.encoding, includeUnitEncoding, verbose, verbose)
 
-	} else if p.audioType == AudioTypeAAC {
-		fmt.Println("Not jet implemented!")
+	} else if p.audioType == AudioTypeAac {
+		p.encoding, err = GetEncodingFromFirstAdtsHeader(data, uint64(firstFrameIndex))
+		if err != nil {
+			return nil
+		}
+		p.audioInfo = ParseAac(data[firstFrameIndex:], p.encoding, includeUnitEncoding, verbose, verbose)
 	}
 
 	fmt.Println()
-	p.audioInfo.FirstFrameIndex = p.audioInfo.TagSize + int64(p.skippedUntilFirstFrame)
+	p.audioInfo.FirstFrameIndex = firstFrameIndex
 	if printLogs {
 		p.PrintAudioInfo()
 	}
@@ -179,7 +212,7 @@ func (p *Parser) ParseBlockwise(data []byte, audioTypeGuessed AudioType, include
 
 	if !p.foundFirstFrame {
 		// get audio
-		p.audioType = GetAudioType(p.currentData[offset:])
+		p.audioType = GetAudioType(p.currentData, uint64(offset), audioTypeGuessed)
 		if p.audioType == AudioTypeUnknown {
 			fmt.Println("Unknown audio type.")
 			return nil, nil
@@ -217,8 +250,9 @@ func (p *Parser) ParseBlockwise(data []byte, audioTypeGuessed AudioType, include
 	var audioInfoBlock AudioInfos
 	if p.audioType == AudioTypeMp3 {
 		audioInfoBlock = ParseMp3(p.currentData[offset:], p.encoding, includeUnitEncoding, verbose, verbose)
-	} else if p.audioType == AudioTypeAAC {
+	} else if p.audioType == AudioTypeAac {
 		fmt.Println("Not jet implemented!")
+		audioInfoBlock = ParseAac(p.currentData[offset:], p.encoding, includeUnitEncoding, verbose, verbose)
 	}
 
 	// remove handled data from
@@ -291,5 +325,37 @@ func GetEncodingFromFirstMpegHeader(data []byte, offset uint64) (Encoding, error
 
 func ParseMp3(data []byte, encoding Encoding, includeUnitEncoding bool, printHeaders bool, verbose bool) AudioInfos {
 	audioInfo := GetAudioInfosMpeg(data, 0, encoding, includeUnitEncoding, printHeaders, verbose)
+	return audioInfo
+}
+
+// aac
+
+func GetEncodingFromFirstAdtsHeader(data []byte, offset uint64) (Encoding, error) {
+	if len(data)-int(offset) < AdtsHeaderSizeMax {
+		fmt.Println("Too small")
+		return Encoding{}, errors.New("buffer too small")
+	}
+	// get frame infos
+	fmt.Println()
+	fmt.Println("*************")
+	fmt.Println("Initial header", offset)
+	fmt.Println("use encoding!")
+	header := GetAdtsHeader(data, int64(offset))
+	if !header.IsValid(true) {
+		fmt.Println("Error: Header is not valid")
+		header.Print(false)
+		return Encoding{}, errors.New("invalid header")
+	}
+	encoded := hex.EncodeToString(data[offset : offset+7])
+	fmt.Println(encoded)
+	header.Print(true)
+	fmt.Println("*************")
+	fmt.Println()
+	return GetAdtsEncoding(header), nil
+}
+
+func ParseAac(data []byte, encoding Encoding, includeUnitEncoding bool, printHeaders bool, verbose bool) AudioInfos {
+	fmt.Println("get aac")
+	audioInfo := GetAudioInfosAac(data, 0, encoding, includeUnitEncoding, printHeaders, verbose)
 	return audioInfo
 }

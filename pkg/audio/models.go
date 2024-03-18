@@ -12,7 +12,7 @@ type AudioType int
 const (
 	AudioTypeUnknown AudioType = iota
 	AudioTypeMp3
-	AudioTypeAAC
+	AudioTypeAac
 )
 
 // encoding

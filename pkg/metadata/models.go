@@ -6,4 +6,5 @@ const (
 	MetadataTagTypeNone MetadataTagType = iota
 	MetadataTagTypeUnknown
 	MetadataTagTypeId3V2
+	MetadataTagTypeQuicktime
 )

@@ -12,7 +12,7 @@ import (
 type PrivateBitValidator struct {
 	active               bool
 	verbose              bool
-	metrics              bool
+	metricManager        *metricmanager.MetricManager
 	audioType            AudioType
 	lastFrameDistance    uint64
 	currentFrameCount    uint64
@@ -20,8 +20,8 @@ type PrivateBitValidator struct {
 	foundInitialDistance bool
 }
 
-func NewPrivateBitValidator(active bool, audioType AudioType, metrics bool, verbose bool) *PrivateBitValidator {
-	return &PrivateBitValidator{verbose: verbose, active: active, audioType: audioType, parser: NewParser(), metrics: metrics}
+func NewPrivateBitValidator(active bool, audioType AudioType, metricManager *metricmanager.MetricManager, verbose bool) *PrivateBitValidator {
+	return &PrivateBitValidator{verbose: verbose, active: active, audioType: audioType, parser: NewParser(), metricManager: metricManager}
 }
 
 func (v *PrivateBitValidator) Validate(data []byte, failEarly bool) error {
@@ -34,7 +34,9 @@ func (v *PrivateBitValidator) Validate(data []byte, failEarly bool) error {
 	blockAudioInfo, err := v.parser.ParseBlockwise(data, v.audioType, true, v.verbose, false)
 	if err != nil {
 		log.Err(err, "Parsing error.")
-		metricmanager.IncParseAudioErrorCounter()
+		if v.metricManager != nil {
+			v.metricManager.IncParseAudioErrorCounter()
+		}
 		return err
 	}
 
@@ -62,7 +64,9 @@ func (v *PrivateBitValidator) Validate(data []byte, failEarly bool) error {
 				} else {
 					log.Error("Distances not equal. Current:", v.currentFrameCount, "!= Last:", v.lastFrameDistance, i, len(blockAudioInfo.Units))
 					// update metric
-					metricmanager.IncValidationErrorCounter()
+					if v.metricManager != nil {
+						v.metricManager.IncValidationErrorCounter()
+					}
 				}
 			} // else {
 			// 	log.Info("Distance between private bits:", v.lastFrameDistance)
@@ -80,15 +84,15 @@ func (v *PrivateBitValidator) Validate(data []byte, failEarly bool) error {
 // encoding validator
 
 type EncodingValidator struct {
-	active       bool
-	expectations Expectations
-	verbose      bool
-	metrics      bool
-	parser       *Parser
+	active        bool
+	expectations  Expectations
+	verbose       bool
+	metricManager *metricmanager.MetricManager
+	parser        *Parser
 }
 
-func NewEncodingValidator(active bool, expectations Expectations, metrics bool, verbose bool) *EncodingValidator {
-	return &EncodingValidator{expectations: expectations, verbose: verbose, active: active, metrics: metrics, parser: NewParser()}
+func NewEncodingValidator(active bool, expectations Expectations, metricManager *metricmanager.MetricManager, verbose bool) *EncodingValidator {
+	return &EncodingValidator{expectations: expectations, verbose: verbose, active: active, metricManager: metricManager, parser: NewParser()}
 }
 
 func (v *EncodingValidator) Validate(data []byte, failEarly bool) error {
@@ -110,14 +114,14 @@ func (v *EncodingValidator) Validate(data []byte, failEarly bool) error {
 	}
 
 	// validate audio info
-	isValid := IsValid(v.expectations, *blockAudioInfo)
+	isValid := IsValid(v.expectations, *blockAudioInfo, v.metricManager)
 	if !isValid && failEarly {
 		return errors.New("validation failed")
 	}
 
 	// validate encodings
 	for _, unit := range blockAudioInfo.Units {
-		isValid = IsValidEncoding(v.expectations, unit.Encoding)
+		isValid = IsValidEncoding(v.expectations, unit.Encoding, v.metricManager)
 		if !isValid && failEarly {
 			return errors.New("validation failed")
 		}
@@ -128,7 +132,7 @@ func (v *EncodingValidator) Validate(data []byte, failEarly bool) error {
 
 // general valiation
 
-func IsValid(expectations Expectations, audioInfo AudioInfos) bool {
+func IsValid(expectations Expectations, audioInfo AudioInfos, metricManager *metricmanager.MetricManager) bool {
 	isValid := true
 	if expectations.IsCBR {
 		if expectations.IsCBR != audioInfo.IsCBR {
@@ -139,13 +143,15 @@ func IsValid(expectations Expectations, audioInfo AudioInfos) bool {
 
 	// update metric
 	if !isValid {
-		metricmanager.IncValidationErrorCounter()
+		if metricManager != nil {
+			metricManager.IncValidationErrorCounter()
+		}
 	}
 
 	return isValid
 }
 
-func IsValidEncoding(expectations Expectations, encoding Encoding) bool {
+func IsValidEncoding(expectations Expectations, encoding Encoding, metricManager *metricmanager.MetricManager) bool {
 	isValid := true
 	if expectations.Encoding.Bitrate > 0 {
 		if expectations.Encoding.Bitrate != encoding.Bitrate {
@@ -185,7 +191,9 @@ func IsValidEncoding(expectations Expectations, encoding Encoding) bool {
 
 	// update metric
 	if !isValid {
-		metricmanager.IncValidationErrorCounter()
+		if metricManager != nil {
+			metricManager.IncValidationErrorCounter()
+		}
 	}
 
 	return isValid

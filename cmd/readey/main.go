@@ -48,13 +48,14 @@ func main() {
 	}
 
 	// start metrics server
+	var metricManager *metricmanager.MetricManager
 	if *metrics {
-		metricmanager.MetricPrefix = *metricPrefix
+		metricManager = metricmanager.NewMetricManager(*metricPrefix, *url)
 		go metricmanager.Listen(*metricPort)
 	}
 
 	// read stream
-	go ReadStream(*url, *maxBytes, *outputFilepath, *reconnect, *timeout, c, *validate, *metrics, *verbose)
+	go ReadStream(*url, *maxBytes, *outputFilepath, *reconnect, *timeout, c, *validate, metricManager, *verbose)
 
 	// start minio sync
 	goRoutineCounter := 1
@@ -71,7 +72,7 @@ func main() {
 
 // stream
 
-func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout int, config configmanager.Config, validate string, metrics bool, verbose bool) {
+func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout int, config configmanager.Config, validate string, metricManager *metricmanager.MetricManager, verbose bool) {
 	if strings.ToLower(validate) == "audio" {
 		log.Newline()
 		log.Info("### Audio validation")
@@ -86,10 +87,10 @@ func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bo
 		expectations.Print()
 		log.Info("###")
 		log.Newline()
-		validator := audio.NewEncodingValidator(true, expectations, metrics, verbose)
+		validator := audio.NewEncodingValidator(true, expectations, metricManager, verbose)
 		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator)
 	} else if strings.ToLower(validate) == "privatebit" {
-		validator := audio.NewPrivateBitValidator(true, audio.GuessAudioType(url), metrics, verbose)
+		validator := audio.NewPrivateBitValidator(true, audio.GuessAudioType(url), metricManager, verbose)
 		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator)
 	} else {
 		validator := network.DummyValidator{}

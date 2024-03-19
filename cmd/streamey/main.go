@@ -39,8 +39,9 @@ func main() {
 	data := GetData(*filepath)
 
 	// start metrics server
+	var metricManager *metricmanager.MetricManager
 	if *metrics {
-		metricmanager.MetricPrefix = *metricPrefix
+		metricManager = metricmanager.NewMetricManager(*metricPrefix, *url)
 		go metricmanager.Listen(*metricPort)
 	}
 
@@ -49,7 +50,7 @@ func main() {
 	streamUrl := *url
 	if *test {
 		goRoutineCounter++
-		go Receive(*validateTest, *metrics, *verbose)
+		go Receive(*validateTest, metricManager, *verbose)
 		// overwrite url
 		streamUrl = "localhost:9999"
 	}
@@ -104,7 +105,7 @@ func Stream(url string, bitrate float64, sampleRate int, data []byte, reconnect 
 	wg.Done()
 }
 
-func Receive(validate string, metrics bool, verbose bool) {
+func Receive(validate string, metricManager *metricmanager.MetricManager, verbose bool) {
 	if strings.ToLower(validate) == "audio" {
 		log.Newline()
 		log.Info("### Audio validation")
@@ -118,11 +119,11 @@ func Receive(validate string, metrics bool, verbose bool) {
 		expectations.Print()
 		log.Info("###")
 		log.Newline()
-		validator := audio.NewEncodingValidator(true, expectations, metrics, verbose)
+		validator := audio.NewEncodingValidator(true, expectations, metricManager, verbose)
 		network.ReadTest(9999, true, validator)
 	} else if strings.ToLower(validate) == "privatebit" {
 		log.Info("PrivateBit validation.")
-		validator := audio.NewPrivateBitValidator(true, audio.AudioTypeMp3, metrics, verbose)
+		validator := audio.NewPrivateBitValidator(true, audio.AudioTypeMp3, metricManager, verbose)
 		network.ReadTest(9999, true, validator)
 	} else {
 		validator := network.DummyValidator{}

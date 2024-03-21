@@ -26,7 +26,7 @@ func (v DummyValidator) Validate(data []byte, failEarly bool) error {
 
 // read stream
 
-func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout time.Duration, dataValidator Validator) {
+func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout time.Duration, dataValidator Validator, metricManager *metricmanager.MetricManager) {
 	// early exit
 	if url == "" {
 		log.Newline()
@@ -51,7 +51,7 @@ func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bo
 	for {
 		log.Info("Start connection", iteration)
 		filepath := getFilePath(outputFilepath, iteration, true)
-		ReadLineByLine(url, filepath, timeout, maxBytes, "", dataValidator)
+		ReadLineByLine(url, filepath, timeout, maxBytes, "", dataValidator, metricManager)
 		log.Newline()
 		if !reconnect {
 			break
@@ -60,7 +60,7 @@ func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bo
 	}
 }
 
-func ReadLineByLine(url string, dumpToFile string, timeout time.Duration, maxBytes uint64, bearerToken string, dataValidator Validator) error {
+func ReadLineByLine(url string, dumpToFile string, timeout time.Duration, maxBytes uint64, bearerToken string, dataValidator Validator, metricManager *metricmanager.MetricManager) error {
 	// request
 	// build request
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -108,7 +108,9 @@ func ReadLineByLine(url string, dumpToFile string, timeout time.Duration, maxByt
 		}
 		bytesReadCycle = len(line)
 		bytesRead += uint64(bytesReadCycle)
-		metricmanager.IncBytesReadCounter(bytesReadCycle)
+		if metricManager != nil {
+			metricManager.IncBytesReadCounter(bytesReadCycle)
+		}
 
 		// validate
 		validationErr := dataValidator.Validate(line, true)
@@ -140,7 +142,7 @@ func getFilePath(baseFilePath string, iteration int, addTimestamp bool) string {
 
 // quick read test
 
-func ReadTest(port int, printRate bool, dataValidator Validator) {
+func ReadTest(port int, printRate bool, dataValidator Validator, metricManager *metricmanager.MetricManager) {
 	listener, err := net.Listen("tcp", "localhost:"+strconv.Itoa(port))
 	if err != nil {
 		log.Err(err, "Listen error.")
@@ -159,11 +161,11 @@ func ReadTest(port int, printRate bool, dataValidator Validator) {
 		}
 
 		// Handle client connection in a goroutine
-		go handleClient(conn, dataValidator)
+		go handleClient(conn, dataValidator, metricManager)
 	}
 }
 
-func handleClient(conn net.Conn, dataValidator Validator) {
+func handleClient(conn net.Conn, dataValidator Validator, metricManager *metricmanager.MetricManager) {
 	defer conn.Close()
 
 	var readTotal int64 = 0
@@ -180,7 +182,9 @@ func handleClient(conn net.Conn, dataValidator Validator) {
 			return
 		}
 		readTotal += int64(n)
-		metricmanager.IncBytesReadCounter(n)
+		if metricManager != nil {
+			metricManager.IncBytesReadCounter(n)
+		}
 
 		// validate
 		dataValidator.Validate(buffer, true)

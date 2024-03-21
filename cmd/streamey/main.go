@@ -56,7 +56,7 @@ func main() {
 	}
 
 	goRoutineCounter++
-	go Stream(streamUrl, float64(*bitrate), *sr, data, *reconnect, *isIcecast, *verbose)
+	go Stream(streamUrl, float64(*bitrate), *sr, data, *reconnect, *isIcecast, metricManager, *verbose)
 
 	wg.Add(goRoutineCounter)
 	wg.Wait()
@@ -81,7 +81,7 @@ func GetData(filepath string) []byte {
 	return data
 }
 
-func Stream(url string, bitrate float64, sampleRate int, data []byte, reconnect bool, isIcecast bool, verbose bool) {
+func Stream(url string, bitrate float64, sampleRate int, data []byte, reconnect bool, isIcecast bool, metricManager *metricmanager.MetricManager, verbose bool) {
 	var header []byte
 	if isIcecast {
 		// header
@@ -97,10 +97,10 @@ func Stream(url string, bitrate float64, sampleRate int, data []byte, reconnect 
 		}
 		// send buffer
 		address := icyAdd.Domain + ":" + icyAdd.Port
-		network.StreamBuffer(address, bitrate, header, data, reconnect, verbose)
+		network.StreamBuffer(address, bitrate, header, data, reconnect, metricManager, verbose)
 	} else {
 		// send buffer as is
-		network.StreamBuffer(url, bitrate, header, data, reconnect, verbose)
+		network.StreamBuffer(url, bitrate, header, data, reconnect, metricManager, verbose)
 	}
 	wg.Done()
 }
@@ -120,14 +120,14 @@ func Receive(validate string, metricManager *metricmanager.MetricManager, verbos
 		log.Info("###")
 		log.Newline()
 		validator := audio.NewEncodingValidator(true, expectations, metricManager, verbose)
-		network.ReadTest(9999, true, validator)
+		network.ReadTest(9999, true, validator, metricManager)
 	} else if strings.ToLower(validate) == "privatebit" {
 		log.Info("PrivateBit validation.")
 		validator := audio.NewPrivateBitValidator(true, audio.AudioTypeMp3, metricManager, verbose)
-		network.ReadTest(9999, true, validator)
+		network.ReadTest(9999, true, validator, metricManager)
 	} else {
 		validator := network.DummyValidator{}
-		network.ReadTest(9999, true, validator)
+		network.ReadTest(9999, true, validator, metricManager)
 	}
 	wg.Done()
 }

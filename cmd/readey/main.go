@@ -88,13 +88,13 @@ func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bo
 		log.Info("###")
 		log.Newline()
 		validator := audio.NewEncodingValidator(true, expectations, metricManager, verbose)
-		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator)
+		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator, metricManager)
 	} else if strings.ToLower(validate) == "privatebit" {
 		validator := audio.NewPrivateBitValidator(true, audio.GuessAudioType(url), metricManager, verbose)
-		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator)
+		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator, metricManager)
 	} else {
 		validator := network.DummyValidator{}
-		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator)
+		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator, metricManager)
 	}
 	wg.Done()
 }

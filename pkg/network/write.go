@@ -9,7 +9,7 @@ import (
 	"github.com/nice-pink/streamey/pkg/metricmanager"
 )
 
-func StreamBuffer(address string, sendBitRate float64, headerBuffer []byte, buffer []byte, reconnect bool, verbose bool) {
+func StreamBuffer(address string, sendBitRate float64, headerBuffer []byte, buffer []byte, reconnect bool, metricManager *metricmanager.MetricManager, verbose bool) {
 	log.Info("Stream data to", address, "with bitrate", sendBitRate, ". Reconnect", reconnect)
 	for {
 		// connection
@@ -46,7 +46,9 @@ func StreamBuffer(address string, sendBitRate float64, headerBuffer []byte, buff
 				byteIndex = 0
 				count = 1
 				loopCount++
-				metricmanager.IncWriteLoopCounter()
+				if metricManager != nil {
+					metricManager.IncWriteLoopCounter()
+				}
 			}
 			/*
 			 * calculate our instant rate over the entire transmit
@@ -70,7 +72,9 @@ func StreamBuffer(address string, sendBitRate float64, headerBuffer []byte, buff
 				if bytesWrittenCycle != dist {
 					log.Error("Not all bytes sent. Should", dist, ", did", bytesWrittenCycle)
 				}
-				metricmanager.IncBytesWrittenCounter(bytesWrittenCycle)
+				if metricManager != nil {
+					metricManager.IncBytesWrittenCounter(bytesWrittenCycle)
+				}
 				bytesWrittenTotal += int64(bytesWrittenCycle)
 				byteIndex += int64(bytesWrittenCycle)
 

@@ -1,7 +1,6 @@
 package audio
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -65,8 +64,6 @@ func GetFirstFrameIndex(data []byte, offset uint64, audioTypeGuessed AudioType) 
 	if audioTypeGuessed == AudioTypeAac {
 		header := GetNextAdtsHeader(data, offset)
 		if header != nil {
-			encoded := hex.EncodeToString(data[header.Index : header.Index+7])
-			fmt.Println(encoded)
 			return header.Index
 		}
 		return -1
@@ -261,7 +258,6 @@ func (p *Parser) ParseBlockwise(data []byte, audioTypeGuessed AudioType, include
 	if p.audioType == AudioTypeMp3 {
 		audioInfoBlock = ParseMp3(p.currentData[offset:], p.encoding, includeUnitEncoding, verbose, verbose)
 	} else if p.audioType == AudioTypeAac {
-		fmt.Println("Not jet implemented!")
 		audioInfoBlock = ParseAac(p.currentData[offset:], p.encoding, includeUnitEncoding, verbose, verbose)
 	}
 
@@ -356,8 +352,6 @@ func GetEncodingFromFirstAdtsHeader(data []byte, offset uint64) (Encoding, error
 		header.Print(false)
 		return Encoding{}, errors.New("invalid header")
 	}
-	encoded := hex.EncodeToString(data[offset : offset+7])
-	fmt.Println(encoded)
 	header.Print(true)
 	fmt.Println("*************")
 	fmt.Println()
@@ -365,7 +359,6 @@ func GetEncodingFromFirstAdtsHeader(data []byte, offset uint64) (Encoding, error
 }
 
 func ParseAac(data []byte, encoding Encoding, includeUnitEncoding bool, printHeaders bool, verbose bool) AudioInfos {
-	fmt.Println("get aac")
 	audioInfo := GetAudioInfosAac(data, 0, encoding, includeUnitEncoding, printHeaders, verbose)
 	return audioInfo
 }

@@ -101,18 +101,18 @@ func GetAudioTypeFromCodecName(name string) AudioType {
 
 func (p *Parser) Parse(data []byte, filepath string, includeUnitEncoding bool, verbose bool, printLogs bool) *AudioInfos {
 	// skip tag
-	p.audioInfo.TagSize = metadata.GetTagSize(data)
-	if p.audioInfo.TagSize < 0 {
+	tagSize := metadata.GetTagSize(data)
+	if tagSize < 0 {
 		fmt.Println("Error: Tag size could not be evaluated.")
-		p.audioInfo.TagSize = 0
-	} else if p.audioInfo.TagSize > 0 {
-		fmt.Println("Tag size:", p.audioInfo.TagSize)
+		tagSize = 0
+	} else if tagSize > 0 {
+		fmt.Println("Tag size:", tagSize)
 	}
 
 	// parse audio
 	var audioStart int64 = 0
-	if p.audioInfo.TagSize > 0 {
-		audioStart = p.audioInfo.TagSize - 1
+	if tagSize > 0 {
+		audioStart = tagSize - 1
 	}
 
 	// get audio type
@@ -128,7 +128,7 @@ func (p *Parser) Parse(data []byte, filepath string, includeUnitEncoding bool, v
 	if firstFrameIndex < 0 {
 		return nil
 	}
-	p.skippedUntilFirstFrame = uint64(firstFrameIndex - p.audioInfo.TagSize)
+	p.skippedUntilFirstFrame = uint64(firstFrameIndex - tagSize)
 	p.foundFirstFrame = firstFrameIndex > audioStart
 
 	// confirm audio type
@@ -155,6 +155,7 @@ func (p *Parser) Parse(data []byte, filepath string, includeUnitEncoding bool, v
 
 	fmt.Println()
 	p.audioInfo.FirstFrameIndex = firstFrameIndex
+	p.audioInfo.TagSize = tagSize
 	if printLogs {
 		p.PrintAudioInfo()
 	}
@@ -311,7 +312,7 @@ func GetEncodingFromFirstMpegHeader(data []byte, offset uint64) (Encoding, error
 	fmt.Println("*************")
 	fmt.Println("Initial header")
 	fmt.Println("use encoding!")
-	header := GetMpegHeader(data, int64(offset))
+	header := GetMpegHeader(data[offset:], int64(offset))
 	if !header.IsValid(true) {
 		fmt.Println("Error: Header is not valid")
 		header.Print(false)
@@ -340,7 +341,7 @@ func GetEncodingFromFirstAdtsHeader(data []byte, offset uint64) (Encoding, error
 	fmt.Println("*************")
 	fmt.Println("Initial header", offset)
 	fmt.Println("use encoding!")
-	header := GetAdtsHeader(data, int64(offset))
+	header := GetAdtsHeader(data[offset:], int64(offset))
 	if !header.IsValid(true) {
 		fmt.Println("Error: Header is not valid")
 		header.Print(false)

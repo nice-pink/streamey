@@ -46,6 +46,10 @@ func GetQuicktimeTagSize(data []byte) int64 {
 	var size int64 = GetBlockSize(data, 0)
 	var blockSize int64 = 0
 	for {
+		if len(data) < int(size) {
+			return -1
+		}
+
 		blockSize = GetBlockSize(data, uint64(size))
 		if blockSize == 0 {
 			fmt.Println("No block size")

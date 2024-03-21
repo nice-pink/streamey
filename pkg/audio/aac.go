@@ -167,6 +167,7 @@ func (h AdtsHeader) Print(extended bool) {
 	fmt.Println(label)
 	fmt.Println("Bitrate: " + GetBitrateString(h.Bitrate))
 	fmt.Println("Sample Rate: " + strconv.Itoa(h.SampleRate))
+	fmt.Println("Profile: " + strconv.Itoa(int(h.Profile)))
 	if extended {
 		fmt.Println("Private: " + util.YesNo(h.Private))
 		fmt.Println("Copyright: " + util.YesNo(h.Copyright))
@@ -288,7 +289,7 @@ func GetNextAdtsHeader(data []byte, offset uint64) *AdtsHeader {
 			continue
 		}
 
-		header.Print(true)
+		// header.Print(true)
 		return &header
 	}
 	return nil
@@ -313,12 +314,18 @@ func (header AdtsHeader) IsValid(verbose bool) bool {
 		}
 		return false
 	}
-	if header.Private {
+	if header.Profile < 0 {
 		if verbose {
-			fmt.Println("Invalid layer")
+			fmt.Println("Invalid profile", header.Profile)
 		}
 		return false
 	}
+	// if header.Private {
+	// 	if verbose {
+	// 		fmt.Println("Invalid layer")
+	// 	}
+	// 	return false
+	// }
 
 	return true
 }

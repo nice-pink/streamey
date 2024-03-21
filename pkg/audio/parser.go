@@ -219,11 +219,20 @@ func (p *Parser) ParseBlockwise(data []byte, audioTypeGuessed AudioType, include
 			return nil, nil
 		}
 		if !p.foundEncoding {
-			header := GetNextMpegHeader(p.currentData, uint64(offset))
-			if header != nil {
-				p.encoding = GetMpegEncoding(*header)
-				p.foundEncoding = true
+			if audioTypeGuessed == AudioTypeMp3 {
+				header := GetNextMpegHeader(p.currentData, uint64(offset))
+				if header != nil {
+					p.encoding = GetMpegEncoding(*header)
+					p.foundEncoding = true
+				}
+			} else if audioTypeGuessed == AudioTypeAac {
+				header := GetNextAdtsHeader(p.currentData, uint64(offset))
+				if header != nil {
+					p.encoding = GetAdtsEncoding(*header)
+					p.foundEncoding = true
+				}
 			}
+
 			// 	var err error
 			// 	for {
 			// 		p.encoding, err = GetEncodingFromFirstMpegHeader(data, uint64(offset))

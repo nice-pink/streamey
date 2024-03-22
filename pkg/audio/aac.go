@@ -238,14 +238,14 @@ func GetAudioInfosAac(data []byte, offset uint64, encoding Encoding, includeUnit
 		// 	audioInfos.IsCBR = false
 		// }
 
-		// print frame headers
-		if printHeaders {
-			header.Print(verbose)
-		}
-
 		// exit if frame is not complete
 		if index+uint64(header.Size) > uint64(dataSize) {
 			break
+		}
+
+		// print frame headers
+		if printHeaders {
+			header.Print(verbose)
 		}
 
 		// append unit
@@ -331,8 +331,12 @@ func (header AdtsHeader) IsValid(verbose bool) bool {
 }
 
 func SetAdtsPrivate(header []byte, offset uint64) {
+	// before := hex.EncodeToString(header)
+	// fmt.Println(before)
 	var mask uint8 = 2
 	header[offset+2] = header[offset+2] | mask
+	// after := hex.EncodeToString(header)
+	// fmt.Println(after)
 }
 
 func SetAdtsUnPrivate(header []byte, offset uint64) {

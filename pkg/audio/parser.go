@@ -189,11 +189,13 @@ func (p *Parser) ParseBlockwise(data []byte, audioTypeGuessed AudioType, include
 		}
 
 		// skip tag
-		if p.audioInfo.TagSize > 0 && p.audioInfo.TagSize-p.currentTagIndex < int64(dataSize) {
+		if p.audioInfo.TagSize-p.currentTagIndex < int64(dataSize) {
 			p.tagEnd = p.audioInfo.TagSize - p.currentTagIndex
-			p.currentTagIndex = p.audioInfo.TagSize - 1
+			if p.audioInfo.TagSize > 0 {
+				p.currentTagIndex = p.audioInfo.TagSize - 1
+				fmt.Println("Skipped tag at index:", p.currentTagIndex)
+			}
 			p.skippedTag = true
-			fmt.Println("Skipped tag at index:", p.currentTagIndex)
 		} else {
 			p.currentTagIndex += int64(dataSize)
 			p.currentData = p.currentData[:0]
@@ -253,7 +255,7 @@ func (p *Parser) ParseBlockwise(data []byte, audioTypeGuessed AudioType, include
 		p.tagEnd = 0
 	}
 
-	// parse audio
+	// parse audio - printing all headers is misleading as they might repeat due to overlaps
 	var audioInfoBlock AudioInfos
 	if p.audioType == AudioTypeMp3 {
 		audioInfoBlock = ParseMp3(p.currentData[offset:], p.encoding, includeUnitEncoding, verbose, verbose)
@@ -303,6 +305,9 @@ func MakeFirstFramePrivate(data []byte, offset uint64, audioType AudioType) {
 	if audioType == AudioTypeMp3 {
 		SetMpegPrivate(data, offset)
 	}
+	if audioType == AudioTypeAac {
+		SetAdtsPrivate(data, offset)
+	}
 }
 
 // mpeg
@@ -318,7 +323,7 @@ func GetEncodingFromFirstMpegHeader(data []byte, offset uint64) (Encoding, error
 	fmt.Println("Initial header")
 	fmt.Println("use encoding!")
 	header := GetMpegHeader(data[offset:], int64(offset))
-	if !header.IsValid(true) {
+	if !header.IsValid(false, true) {
 		fmt.Println("Error: Header is not valid")
 		header.Print(false)
 		return Encoding{}, errors.New("invalid header")

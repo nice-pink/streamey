@@ -12,6 +12,7 @@ import (
 func main() {
 	filepath := flag.String("filepath", "", "Filepath")
 	block := flag.Bool("block", false, "Parse file in blocks.")
+	repeatBlock := flag.Int("n", 0, "Repeat blocks.")
 	verbose := flag.Bool("verbose", false, "Make output verbose.")
 	flag.Parse()
 
@@ -35,7 +36,7 @@ func main() {
 	if *block {
 		guessedAudioType := audio.GuessAudioType(*filepath)
 		// parse continuously
-		Blockwise(data, guessedAudioType, *verbose)
+		Blockwise(data, guessedAudioType, *repeatBlock, *verbose)
 	} else {
 		// parse audio
 		parser := audio.NewParser()
@@ -43,13 +44,19 @@ func main() {
 	}
 }
 
-func Blockwise(data []byte, guessedAudioType audio.AudioType, verbose bool) {
+func Blockwise(data []byte, guessedAudioType audio.AudioType, repeatBuffer int, verbose bool) {
 	parser := audio.NewParser()
 	dataSize := len(data)
+	repeated := 0
 	index := 0
 	for {
 		if index >= dataSize {
-			break
+			repeated++
+			if repeated > repeatBuffer {
+				break
+			}
+			// repeat
+			index = 0
 		}
 		iMax := min(index+1024, dataSize)
 		parser.ParseBlockwise(data[index:iMax], guessedAudioType, false, verbose, false)

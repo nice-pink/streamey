@@ -243,14 +243,14 @@ func GetAudioInfosMpeg(data []byte, offset uint64, encoding Encoding, includeUni
 			audioInfos.IsCBR = false
 		}
 
-		// print frame headers
-		if printHeaders {
-			header.Print(verbose)
-		}
-
 		// exit if frame is not complete
 		if index+uint64(frameSize) > uint64(dataSize) {
 			break
+		}
+
+		// print frame headers
+		if printHeaders {
+			header.Print(verbose)
 		}
 
 		// append unit
@@ -305,7 +305,7 @@ func GetNextMpegHeader(data []byte, offset uint64) *MpegHeader {
 
 		// get header
 		header := GetMpegHeader(data[index:], index)
-		if !header.IsValid(false) {
+		if !header.IsValid(true, false) {
 			index++
 			continue
 		}
@@ -324,7 +324,7 @@ func GetNextMpegHeader(data []byte, offset uint64) *MpegHeader {
 
 //
 
-func (header MpegHeader) IsValid(verbose bool) bool {
+func (header MpegHeader) IsValid(allowVbr bool, verbose bool) bool {
 	if header.MpegVersion == MpegVersionReserved {
 		if verbose {
 			fmt.Println("Invalid version")
@@ -343,9 +343,15 @@ func (header MpegHeader) IsValid(verbose bool) bool {
 		}
 		return false
 	}
-	if header.Bitrate <= 0 {
+	if header.Bitrate < 0 {
 		if verbose {
 			fmt.Println("Invalid bitrate", header.Bitrate)
+		}
+		return false
+	}
+	if !allowVbr && header.Bitrate == 0 {
+		if verbose {
+			fmt.Println("Bitrate is variable", header.Bitrate)
 		}
 		return false
 	}
@@ -373,7 +379,7 @@ func GetMpegSampleRate(value int8, version MpegVersion) int {
 }
 
 func GetMpegBitrate(value int8, layer MpegLayer, version MpegVersion) int {
-	if value == 0 || layer == MpegLayerReserved || version == MpegVersionReserved {
+	if value == 15 || layer == MpegLayerReserved || version == MpegVersionReserved {
 		return 0
 	}
 	return mpegBitrates[version][layer][value]

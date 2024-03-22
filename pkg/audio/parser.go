@@ -189,7 +189,7 @@ func (p *Parser) ParseBlockwise(data []byte, audioTypeGuessed AudioType, include
 		}
 
 		// skip tag
-		if p.audioInfo.TagSize-p.currentTagIndex < int64(dataSize) {
+		if p.audioInfo.TagSize > 0 && p.audioInfo.TagSize-p.currentTagIndex < int64(dataSize) {
 			p.tagEnd = p.audioInfo.TagSize - p.currentTagIndex
 			p.currentTagIndex = p.audioInfo.TagSize - 1
 			p.skippedTag = true

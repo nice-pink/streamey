@@ -5,8 +5,8 @@ import (
 	"io"
 	"os"
 
+	"github.com/nice-pink/audio-tool/pkg/audio/encodings"
 	"github.com/nice-pink/goutil/pkg/log"
-	"github.com/nice-pink/streamey/pkg/audio"
 )
 
 func main() {
@@ -34,18 +34,18 @@ func main() {
 	}
 
 	if *block {
-		guessedAudioType := audio.GuessAudioType(*filepath)
+		guessedAudioType := encodings.GuessAudioType(*filepath)
 		// parse continuously
 		Blockwise(data, guessedAudioType, *repeatBlock, *verbose)
 	} else {
 		// parse audio
-		parser := audio.NewParser()
+		parser := encodings.NewParser()
 		parser.Parse(data, *filepath, false, *verbose, true)
 	}
 }
 
-func Blockwise(data []byte, guessedAudioType audio.AudioType, repeatBuffer int, verbose bool) {
-	parser := audio.NewParser()
+func Blockwise(data []byte, guessedAudioType encodings.AudioType, repeatBuffer int, verbose bool) {
+	parser := encodings.NewParser()
 	dataSize := len(data)
 	repeated := 0
 	index := 0

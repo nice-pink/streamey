@@ -1,5 +1,31 @@
 #!/bin/bash
 
+mkdir -p bin/
+
+function build_all() {
+    for d in cmd/*/ ; do
+        [ -L "${d%/}" ] && continue
+        echo "build $d"
+        cd $d
+        go build -o ../../bin
+        cd ../..
+        echo "done!"
+    done
+}
+
+test() {
+    go test ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
+}
+
+# test
+test
+
+if [ -z "$1" ]
+then
+    build_all
+    exit $?
+fi
+
 echo "build cmd/$1"
 cd cmd/$1
 go build -o ../../bin

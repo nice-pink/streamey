@@ -48,8 +48,8 @@ func GetIcyAddress(fullUrl string) (IcyAdd, error) {
 	return IcyAdd{Scheme: scheme, Domain: domain, MountPoint: mountPoint, Port: port, BasicAuth: basicAuth}, nil
 }
 
-func GetIcecastPutHeader(icyAdd IcyAdd, meta IcyMeta) ([]byte, error) {
-	header := "PUT " + icyAdd.MountPoint + " HTTP/1.1\nHost: " + icyAdd.Domain + ":" + icyAdd.Port + "\n"
+func GetIcecastPutHeader(icyAdd IcyAdd, meta IcyMeta, httpVersion string) ([]byte, error) {
+	header := "PUT " + icyAdd.MountPoint + " HTTP/" + httpVersion + "\nHost: " + icyAdd.Domain + ":" + icyAdd.Port + "\n"
 	if icyAdd.BasicAuth != "" {
 		header += "Authorization: Basic " + icyAdd.BasicAuth + "\n"
 	}

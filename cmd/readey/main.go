@@ -6,13 +6,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nice-pink/audio-tool/pkg/audio/encodings"
+	"github.com/nice-pink/audio-tool/pkg/network"
+	"github.com/nice-pink/audio-tool/pkg/util"
 	"github.com/nice-pink/goutil/pkg/filesystem"
 	"github.com/nice-pink/goutil/pkg/log"
-	"github.com/nice-pink/streamey/pkg/audio"
 	"github.com/nice-pink/streamey/pkg/configmanager"
 	"github.com/nice-pink/streamey/pkg/metricmanager"
 	"github.com/nice-pink/streamey/pkg/miniomanager"
-	"github.com/nice-pink/streamey/pkg/network"
 )
 
 var wg sync.WaitGroup
@@ -28,7 +29,6 @@ func main() {
 
 	// flags
 	url := flag.String("url", "", "Stream url")
-	maxBytes := flag.Uint64("maxBytes", 0, "[Optional] Max bytes to read from url.")
 	timeout := flag.Int("timeout", 30, "Timeout. Default: 30sec")
 	validate := flag.String("validate", "", "Validation type. [audio, privateBit]")
 	outputFilepath := flag.String("outputFilepath", "", "[Optional] Output file path, if data should be dumped to file.")
@@ -48,14 +48,15 @@ func main() {
 	}
 
 	// start metrics server
-	var metricManager *metricmanager.MetricManager
+	metricsControl := util.MetricsControl{Enabled: false}
 	if *metrics {
-		metricManager = metricmanager.NewMetricManager(*metricPrefix, *url)
+		metricsControl.Prefix = *metricPrefix
+		metricsControl.Labels = map[string]string{"url": *url}
 		go metricmanager.Listen(*metricPort)
 	}
 
 	// read stream
-	go ReadStream(*url, *maxBytes, *outputFilepath, *reconnect, *timeout, c, *validate, metricManager, *verbose)
+	go ReadStream(*url, *outputFilepath, *reconnect, false, *timeout, c, *validate, metricsControl, *verbose)
 
 	// start minio sync
 	goRoutineCounter := 1
@@ -72,7 +73,9 @@ func main() {
 
 // stream
 
-func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bool, timeout int, config configmanager.Config, validate string, metricManager *metricmanager.MetricManager, verbose bool) {
+func ReadStream(url string, outputFilepath string, reconnect, failEarly bool, timeout int, config configmanager.Config, validate string, metricsControl util.MetricsControl, verbose bool) {
+	connection := network.NewConnection(url, "", 80, 0, time.Duration(timeout), network.HttpConnection, metricsControl)
+	var validator network.DataValidator
 	if strings.ToLower(validate) == "audio" {
 		log.Newline()
 		log.Info("### Audio validation")
@@ -87,15 +90,13 @@ func ReadStream(url string, maxBytes uint64, outputFilepath string, reconnect bo
 		expectations.Print()
 		log.Info("###")
 		log.Newline()
-		validator := audio.NewEncodingValidator(true, expectations, metricManager, verbose)
-		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator, metricManager)
+		validator = encodings.NewEncodingValidator(true, failEarly, expectations, metricsControl, verbose)
 	} else if strings.ToLower(validate) == "privatebit" {
-		validator := audio.NewPrivateBitValidator(true, audio.GuessAudioType(url), metricManager, verbose)
-		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator, metricManager)
+		validator = encodings.NewPrivateBitValidator(true, encodings.GuessAudioType(url), metricsControl, verbose)
 	} else {
-		validator := network.DummyValidator{}
-		network.ReadStream(url, maxBytes, outputFilepath, reconnect, time.Duration(timeout)*time.Second, validator, metricManager)
+		validator = network.DummyValidator{}
 	}
+	connection.ReadStream(outputFilepath, reconnect, validator)
 	wg.Done()
 }
 

@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/nice-pink/audio-tool/pkg/audio/encodings"
 	"github.com/nice-pink/goutil/pkg/log"
-	"github.com/nice-pink/streamey/pkg/audio"
 	"github.com/nice-pink/streamey/pkg/miniomanager"
 )
 
 type Config struct {
-	Expectations audio.Expectations
+	Expectations encodings.Expectations
 	Minio        miniomanager.MinioConfig
 }
 

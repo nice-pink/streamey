@@ -5,8 +5,8 @@ import (
 	"io"
 	"os"
 
+	"github.com/nice-pink/audio-tool/pkg/audio/encodings"
 	"github.com/nice-pink/goutil/pkg/log"
-	"github.com/nice-pink/streamey/pkg/audio"
 )
 
 func main() {
@@ -34,14 +34,14 @@ func main() {
 	}
 
 	// parse audio
-	parser := audio.NewParser()
+	parser := encodings.NewParser()
 	audioInfo := parser.Parse(data, *input, false, *verbose, true)
 	if audioInfo == nil {
 		log.Error("No audio infos!")
 	}
 
 	if *private {
-		audio.MakeFirstFramePrivate(data, uint64(audioInfo.FirstFrameIndex), audio.GuessAudioType(*input))
+		encodings.MakeFirstFramePrivate(data, uint64(audioInfo.FirstFrameIndex), encodings.GuessAudioType(*input))
 
 		if *output != "" {
 			err := os.WriteFile(*output, data, 0644)

@@ -25,7 +25,7 @@ func main() {
 
 	file, err := os.Open(*filepath)
 	if err != nil {
-		log.Err(err, "Cannot open file.")
+		log.Err(err, "Cannot open file.", *filepath)
 	}
 
 	data, err := io.ReadAll(file)

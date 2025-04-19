@@ -1,0 +1,31 @@
+{
+    "items": {
+        "channelName": "test",
+        "audio": {
+            "bitrate": 320000,
+            "sampleRate": 44100,
+            "format": "shoutcast",
+            "targetUrl": "http://user:password@icecast.example.com/test"
+        },
+        "metadata": {
+            "template": "bin/meta.xml",
+            "targetUrl": "https://metadata.example.com/test",
+            "headers": {
+                "x-auth": "auth"
+            }
+        },
+        "playlist": {
+            "contentType": "xml",
+            "items": [
+                {
+                    "type": "Song",
+                    "artist": "Artist",
+                    "title": "Title",
+                    "album": "Album",
+                    "filename": "Filename",
+                    "duration": 254.29
+                }
+            ]
+        }
+    }
+}

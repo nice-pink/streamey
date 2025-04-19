@@ -42,9 +42,9 @@ func main() {
 	metricPort := flag.Int("metricPort", 9090, "Metric port.")
 	flag.Parse()
 
-	var c configmanager.Config
+	var c configmanager.ReadConfig
 	if *config != "" {
-		c = configmanager.Get(*config)
+		c = configmanager.GetReadConfig(*config)
 	}
 
 	// start metrics server
@@ -73,7 +73,7 @@ func main() {
 
 // stream
 
-func ReadStream(url string, outputFilepath string, reconnect, failEarly bool, timeout int, config configmanager.Config, validate string, metricsControl util.MetricsControl, verbose bool) {
+func ReadStream(url string, outputFilepath string, reconnect, failEarly bool, timeout int, config configmanager.ReadConfig, validate string, metricsControl util.MetricsControl, verbose bool) {
 	connection := network.NewConnection(url, "", 80, 0, time.Duration(timeout), network.HttpConnection, metricsControl)
 	var validator network.DataValidator
 	if strings.ToLower(validate) == "audio" {
@@ -102,7 +102,7 @@ func ReadStream(url string, outputFilepath string, reconnect, failEarly bool, ti
 
 // minio
 
-func ManageMinio(config configmanager.Config, delay int64, localFolder string, minioCleanUpAfterSec int64, loop bool) {
+func ManageMinio(config configmanager.ReadConfig, delay int64, localFolder string, minioCleanUpAfterSec int64, loop bool) {
 	useSsl := true
 	m := miniomanager.NewMinioManager(config.Minio, useSsl)
 

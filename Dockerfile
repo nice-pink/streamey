@@ -17,7 +17,7 @@ RUN go mod download
 COPY . .
 
 # build all
-RUN ./build_all
+RUN ./build
 
 FROM cgr.dev/chainguard/glibc-dynamic:latest AS runner
 
@@ -30,3 +30,17 @@ WORKDIR /app
 # copy executable
 COPY --from=builder /app/bin/* /app/
 # ENTRYPOINT [ "/app/streamey" ]
+
+FROM cgr.dev/chainguard/glibc-dynamic:latest AS streamey
+
+# Info
+LABEL org.opencontainers.image.authors="r@nice.pink"
+LABEL org.opencontainers.image.source="https://github.com/nice-pink/streamey/blob/main/Dockerfile"
+
+WORKDIR /app
+
+# copy executable
+COPY --from=builder /app/bin/* ./
+COPY --from=builder /app/audios/same_no_tag.mp3 ./same_no_tag.mp3
+
+ENTRYPOINT [ "/app/streamey" ]

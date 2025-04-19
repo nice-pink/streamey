@@ -3,11 +3,13 @@
 
 # docker
 push-docker-container.sh
+push-docker-container-streamey.sh
 
 # folder
 bin/
 output/
 test_files/
+audios/
 
 # random
 minio-secret.json

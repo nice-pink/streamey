@@ -46,12 +46,12 @@ func Stream(config configmanager.StreamConfig, metrics util.MetricsControl, wg *
 	connection := network.NewConnection(url, "", port, 0, time.Duration(30), network.HttpConnection, metrics)
 	connection.VerboseLogs = verbose
 	defer connection.Close()
-	socketConn, err := connection.GetSocketConn()
+
+	_, err := connection.GetSocketConn()
 	if err != nil {
 		log.Err(err, "cannot establish socket connection to", url)
 		os.Exit(2)
 	}
-	defer socketConn.Close()
 
 	// send metadata
 	httpClient := http.Client{}
@@ -77,17 +77,25 @@ func Stream(config configmanager.StreamConfig, metrics util.MetricsControl, wg *
 			// header
 			var header []byte
 			var err error
-			if streamFormat == configmanager.StreamFormatIcecast {
+			switch streamFormat {
+			case configmanager.StreamFormatIcecast:
 				meta := stream.IcyMeta{Bitrate: int(config.Audio.Bitrate), Channels: 2, SampleRate: config.Audio.SampleRate, Url: config.Audio.TargetUrl}
 				header, err = stream.GetIcecastPutHeader(connTarget, meta, HTTP_VERSION, false)
-			} else if streamFormat == configmanager.StreamFormatShoutcast {
+			case configmanager.StreamFormatShoutcast:
 				header, err = stream.GetShoutcastSourceHeader(connTarget, HTTP_VERSION, false)
 			}
 
 			if err != nil {
 				os.Exit(2)
 			}
-			if !network.WriteHeader(socketConn, header, 3, HTTP_VERSION, true, false) {
+
+			// log get socket conn
+			conn, err := connection.GetSocketConn()
+			if err != nil {
+				log.Err(err, "no socket connection in initFn")
+				return err
+			}
+			if !network.WriteHeader(conn, header, 3, HTTP_VERSION, true, false) {
 				return errors.New("could not send header")
 			}
 			return nil

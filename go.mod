@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/minio/minio-go/v7 v7.0.66
-	github.com/nice-pink/audio-tool v0.0.2-0.20250419105336-ba04d7121a4c
+	github.com/nice-pink/audio-tool v0.0.2-0.20250419135938-a1cfd8cd5428
 	github.com/nice-pink/goutil v0.3.9
 	github.com/prometheus/client_golang v1.21.1
 )

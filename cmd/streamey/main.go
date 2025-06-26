@@ -7,7 +7,6 @@ import (
 	"github.com/nice-pink/audio-tool/pkg/util"
 	"github.com/nice-pink/goutil/pkg/log"
 	"github.com/nice-pink/streamey/pkg/configmanager"
-	"github.com/nice-pink/streamey/pkg/metricmanager"
 	"github.com/nice-pink/streamey/pkg/streamer"
 )
 
@@ -17,7 +16,7 @@ func main() {
 	log.Info("--- Start streamey ---")
 
 	// flags
-	url := flag.String("url", "", "Destination url")
+	// url := flag.String("url", "", "Destination url")
 	// filepath := flag.String("filepath", "", "File to stream.")
 	// reconnect := flag.Bool("reconnect", false, "[Optional] Reconnect on any interruption.")
 	// bitrate := flag.Int64("bitrate", 0, "Send bitrate.")
@@ -28,19 +27,19 @@ func main() {
 	verbose := flag.Bool("verbose", false, "Verbose logging.")
 	// isIcecast := flag.Bool("icecast", false, "Send icecast.")
 	// validateTest := flag.String("validateTest", "", "Validation test.")
-	metrics := flag.Bool("metrics", false, "Add metrics.")
-	metricPrefix := flag.String("metricPrefix", "streamey_", "Metric prefix.")
-	metricPort := flag.Int("metricPort", 9090, "Metric port.")
+	// metrics := flag.Bool("metrics", false, "Add metrics.")
+	// metricPrefix := flag.String("metricPrefix", "streamey_", "Metric prefix.")
+	// metricPort := flag.Int("metricPort", 9090, "Metric port.")
 	configFilepath := flag.String("config", "", "Config filepath")
 	flag.Parse()
 
 	// start metrics server
 	metricsControl := util.MetricsControl{Enabled: false}
-	if *metrics {
-		metricsControl.Prefix = *metricPrefix
-		metricsControl.Labels = map[string]string{"url": *url}
-		go metricmanager.Listen(*metricPort)
-	}
+	// if *metrics {
+	// 	metricsControl.Prefix = *metricPrefix
+	// 	metricsControl.Labels = map[string]string{"url": *url}
+	// 	go metricmanager.Listen(*metricPort)
+	// }
 
 	config := configmanager.GetStreamConfig(*configFilepath)
 
